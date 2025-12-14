@@ -1,19 +1,18 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../models/sensor_data.dart';
 
-class SensorChart extends StatelessWidget {
-  final List<SensorData> history;
-  final double Function(SensorData) getValue;
+class ApiSensorChart extends StatelessWidget {
+  final List<Map<String, dynamic>> historyData;
+  final String valueKey;
   final String title;
   final Color color;
   final double minY;
   final double maxY;
 
-  const SensorChart({
+  const ApiSensorChart({
     super.key,
-    required this.history,
-    required this.getValue,
+    required this.historyData,
+    required this.valueKey,
     required this.title,
     required this.color,
     required this.minY,
@@ -50,7 +49,7 @@ class SensorChart extends StatelessWidget {
           const SizedBox(height: 24),
           SizedBox(
             height: 200,
-            child: history.isEmpty
+            child: historyData.isEmpty
                 ? const Center(child: Text('Waiting for data...'))
                 : LineChart(
                     LineChartData(
@@ -95,14 +94,14 @@ class SensorChart extends StatelessWidget {
                       ),
                       borderData: FlBorderData(show: false),
                       minX: 0,
-                      maxX: (history.length - 1).toDouble(),
+                      maxX: historyData.length > 1
+                          ? (historyData.length - 1).toDouble()
+                          : 1,
                       minY: minY,
                       maxY: maxY,
                       lineBarsData: [
                         LineChartBarData(
-                          spots: history.asMap().entries.map((e) {
-                            return FlSpot(e.key.toDouble(), getValue(e.value));
-                          }).toList(),
+                          spots: _buildSpots(),
                           isCurved: true,
                           color: color,
                           barWidth: 3,
@@ -120,5 +119,22 @@ class SensorChart extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  List<FlSpot> _buildSpots() {
+    return historyData.asMap().entries.map((entry) {
+      final index = entry.key;
+      final data = entry.value;
+
+      // Extract value from the data
+      double value = 0.0;
+      if (data[valueKey] != null) {
+        value = (data[valueKey] is num)
+            ? (data[valueKey] as num).toDouble()
+            : 0.0;
+      }
+
+      return FlSpot(index.toDouble(), value);
+    }).toList();
   }
 }

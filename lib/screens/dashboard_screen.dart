@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/greenhouse_provider.dart';
-import '../widgets/sensor_card.dart';
-import '../widgets/sensor_chart.dart';
+import '../widgets/control_card.dart';
+import '../widgets/api_sensor_chart.dart';
 import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -25,7 +25,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F7FA),
         appBar: AppBar(
@@ -56,54 +56,119 @@ class _DashboardScreenState extends State<DashboardScreen> {
         body: Consumer<GreenhouseProvider>(
           builder: (context, provider, child) {
             final data = provider.data;
-            final history = provider.history;
 
             return ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
+                if (provider.errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning, color: Colors.red.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            provider.errorMessage!,
+                            style: TextStyle(color: Colors.red.shade700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Text(
                   'Last Updated: ${DateFormat('HH:mm:ss').format(data.timestamp)}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 const SizedBox(height: 16),
+
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.1,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.75, // Taller cards for the gauge
                   children: [
-                    SensorCard(
-                      title: 'Temperature',
-                      value: data.temperature.toString(),
-                      unit: '°C',
-                      icon: Icons.thermostat,
-                      color: Colors.orange,
+                    // Ventilation Control (CO2 -> Exhaust Fan)
+                    ControlCard(
+                      title: 'Ventilation',
+                      icon: Icons.air,
+                      color: Colors.teal,
+                      sensorLabel: 'CO2',
+                      sensorValue: data.co2.toStringAsFixed(0),
+                      sensorUnit: 'ppm',
+                      value: data.co2,
+                      min: 0,
+                      max: 2000,
+                      systemName: 'Exhaust Fan',
+                      isSystemActive: data.co2 > 600,
+                      activeText: 'Running',
+                      inactiveText: 'Standby',
                     ),
-                    SensorCard(
-                      title: 'Humidity',
-                      value: data.humidity.toString(),
-                      unit: '%',
-                      icon: Icons.water_drop,
-                      color: Colors.blue,
-                    ),
-                    SensorCard(
-                      title: 'Soil Moisture',
-                      value: data.soilMoisture.toString(),
-                      unit: '%',
-                      icon: Icons.grass,
-                      color: Colors.green,
-                    ),
-                    SensorCard(
-                      title: 'Light Level',
-                      value: data.lightLevel.toString(),
-                      unit: 'lx',
+
+                    // Lighting Control (Light -> Blackout Curtain)
+                    ControlCard(
+                      title: 'Lighting',
                       icon: Icons.wb_sunny,
                       color: Colors.amber,
+                      sensorLabel: 'Light',
+                      sensorValue: data.lightLevel.toStringAsFixed(0),
+                      sensorUnit: 'lx',
+                      value: data.lightLevel,
+                      min: 0,
+                      max: 10000,
+                      systemName: 'Curtain',
+                      isSystemActive: data.lightLevel > 5000,
+                      activeText: 'Closed',
+                      inactiveText: 'Open',
+                    ),
+
+                    // Climate Control (Temp/Hum -> Heating)
+                    ControlCard(
+                      title: 'Climate',
+                      icon: Icons.thermostat,
+                      color: Colors.orange,
+                      sensorLabel: 'Temp',
+                      sensorValue: data.temperature.toStringAsFixed(1),
+                      sensorUnit: '°C',
+                      value: data.temperature,
+                      min: 0,
+                      max: 50,
+                      secondarySensorLabel: 'Hum',
+                      secondarySensorValue: data.humidity.toStringAsFixed(0),
+                      secondarySensorUnit: '%',
+                      systemName: 'Heater',
+                      isSystemActive: data.temperature < 18,
+                      activeText: 'Heating',
+                      inactiveText: 'Standby',
+                    ),
+
+                    // Irrigation Control (Soil -> Pump)
+                    ControlCard(
+                      title: 'Irrigation',
+                      icon: Icons.water_drop,
+                      color: Colors.blue,
+                      sensorLabel: 'Soil',
+                      sensorValue: data.soilMoisture.toStringAsFixed(0),
+                      sensorUnit: '%',
+                      value: data.soilMoisture,
+                      min: 0,
+                      max: 100,
+                      systemName: 'Pump',
+                      isSystemActive: data.soilMoisture < 30,
+                      activeText: 'Watering',
+                      inactiveText: 'Standby',
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 24),
                 const Text(
                   'History Trends',
@@ -121,11 +186,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         labelColor: Colors.green,
                         unselectedLabelColor: Colors.grey,
                         indicatorColor: Colors.green,
+                        isScrollable: true,
                         tabs: const [
                           Tab(text: 'Temp'),
-                          Tab(text: 'Hum'),
-                          Tab(text: 'Soil'),
+                          Tab(text: 'Humidity'),
+                          Tab(text: 'CO2'),
                           Tab(text: 'Light'),
+                          Tab(text: 'Soil'),
                         ],
                       ),
                       SizedBox(
@@ -135,46 +202,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: SensorChart(
-                                history: history,
-                                getValue: (d) => d.temperature,
+                              child: ApiSensorChart(
+                                historyData: provider.getHistory('temp'),
+                                valueKey: 'temp',
                                 title: 'Temperature History',
                                 color: Colors.orange,
                                 minY: 15,
-                                maxY: 30,
+                                maxY: 35,
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: SensorChart(
-                                history: history,
-                                getValue: (d) => d.humidity,
+                              child: ApiSensorChart(
+                                historyData: provider.getHistory('humidity'),
+                                valueKey: 'humidity',
                                 title: 'Humidity History',
                                 color: Colors.blue,
-                                minY: 40,
-                                maxY: 80,
+                                minY: 30,
+                                maxY: 100,
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: SensorChart(
-                                history: history,
-                                getValue: (d) => d.soilMoisture,
-                                title: 'Soil Moisture History',
-                                color: Colors.green,
-                                minY: 20,
-                                maxY: 60,
+                              child: ApiSensorChart(
+                                historyData: provider.getHistory('co2'),
+                                valueKey: 'co2',
+                                title: 'CO2 History',
+                                color: Colors.teal,
+                                minY: 300,
+                                maxY: 2000,
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: SensorChart(
-                                history: history,
-                                getValue: (d) => d.lightLevel,
+                              child: ApiSensorChart(
+                                historyData: provider.getHistory('lux'),
+                                valueKey: 'lux',
                                 title: 'Light Level History',
                                 color: Colors.amber,
                                 minY: 0,
                                 maxY: 1000,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ApiSensorChart(
+                                historyData: provider.getHistory(
+                                  'soil_percent',
+                                ),
+                                valueKey: 'soil_percent',
+                                title: 'Soil Moisture History',
+                                color: Colors.green,
+                                minY: 0,
+                                maxY: 100,
                               ),
                             ),
                           ],

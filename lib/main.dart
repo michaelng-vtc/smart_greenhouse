@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/greenhouse_provider.dart';
-import 'screens/dashboard_screen.dart';
+import 'providers/settings_provider.dart';
+import 'screens/main_screen.dart';
 
 void main() {
   runApp(const MainApp());
@@ -13,12 +15,35 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => GreenhouseProvider())],
-      child: MaterialApp(
-        title: 'Smart Greenhouse',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
-        home: const DashboardScreen(),
+      providers: [
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProxyProvider<SettingsProvider, GreenhouseProvider>(
+          create: (_) => GreenhouseProvider(),
+          update: (_, settings, greenhouse) {
+            greenhouse!.updateSettings(settings);
+            return greenhouse;
+          },
+        ),
+      ],
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, child) {
+          return MaterialApp(
+            title: 'Smart Greenhouse',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
+            locale: settings.locale,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'), // English
+              Locale('zh'), // Chinese
+            ],
+            home: const MainScreen(),
+          );
+        },
       ),
     );
   }
