@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/greenhouse_provider.dart';
 import '../widgets/control_card.dart';
+import '../widgets/sensor_card.dart';
+import '../widgets/analog_gauge.dart';
 import '../widgets/api_sensor_chart.dart';
 import 'package:intl/intl.dart';
 
@@ -91,80 +93,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.75, // Taller cards for the gauge
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 0.7,
                   children: [
-                    // Ventilation Control (CO2 -> Exhaust Fan)
-                    ControlCard(
-                      title: 'Ventilation',
-                      icon: Icons.air,
-                      color: Colors.teal,
-                      sensorLabel: 'CO2',
-                      sensorValue: data.co2.toStringAsFixed(0),
-                      sensorUnit: 'ppm',
-                      value: data.co2,
-                      min: 0,
-                      max: 2000,
-                      systemName: 'Exhaust Fan',
-                      isSystemActive: data.co2 > 600,
-                      activeText: 'Running',
-                      inactiveText: 'Standby',
-                    ),
-
-                    // Lighting Control (Light -> Blackout Curtain)
-                    ControlCard(
-                      title: 'Lighting',
-                      icon: Icons.wb_sunny,
-                      color: Colors.amber,
-                      sensorLabel: 'Light',
-                      sensorValue: data.lightLevel.toStringAsFixed(0),
-                      sensorUnit: 'lx',
-                      value: data.lightLevel,
-                      min: 0,
-                      max: 10000,
-                      systemName: 'Curtain',
-                      isSystemActive: data.lightLevel > 5000,
-                      activeText: 'Closed',
-                      inactiveText: 'Open',
-                    ),
-
-                    // Climate Control (Temp/Hum -> Heating)
-                    ControlCard(
-                      title: 'Climate',
-                      icon: Icons.thermostat,
-                      color: Colors.orange,
-                      sensorLabel: 'Temp',
-                      sensorValue: data.temperature.toStringAsFixed(1),
-                      sensorUnit: '°C',
+                    AnalogGauge(
+                      title: 'Temp',
                       value: data.temperature,
                       min: 0,
                       max: 50,
-                      secondarySensorLabel: 'Hum',
-                      secondarySensorValue: data.humidity.toStringAsFixed(0),
-                      secondarySensorUnit: '%',
-                      systemName: 'Heater',
-                      isSystemActive: data.temperature < 18,
-                      activeText: 'Heating',
-                      inactiveText: 'Standby',
+                      unit: '°C',
+                      color: Colors.orange,
                     ),
-
-                    // Irrigation Control (Soil -> Pump)
-                    ControlCard(
-                      title: 'Irrigation',
-                      icon: Icons.water_drop,
+                    AnalogGauge(
+                      title: 'VPD',
+                      value: data.vpd,
+                      min: 0,
+                      max: 3.0,
+                      unit: 'kPa',
+                      color: Colors.blueGrey,
+                      systemName: 'Heater',
+                      isSystemActive: provider.systemStatus.isHeaterOn,
+                      secondarySystemName: 'Mister',
+                      isSecondarySystemActive: provider.systemStatus.isMisterOn,
+                    ),
+                    AnalogGauge(
+                      title: 'Humidity',
+                      value: data.humidity,
+                      min: 0,
+                      max: 100,
+                      unit: '%',
                       color: Colors.blue,
-                      sensorLabel: 'Soil',
-                      sensorValue: data.soilMoisture.toStringAsFixed(0),
-                      sensorUnit: '%',
+                    ),
+                    AnalogGauge(
+                      title: 'Light',
+                      value: data.lightLevel,
+                      min: 0,
+                      max: 5000,
+                      unit: 'lx',
+                      color: Colors.amber,
+                      systemName: 'Curtain',
+                      isSystemActive: provider.systemStatus.isCurtainOn,
+                    ),
+                    AnalogGauge(
+                      title: 'CO2',
+                      value: data.co2,
+                      min: 0,
+                      max: 2000,
+                      unit: 'ppm',
+                      color: Colors.teal,
+                      systemName: 'Fan',
+                      isSystemActive: provider.systemStatus.isFanOn,
+                    ),
+                    AnalogGauge(
+                      title: 'Soil',
                       value: data.soilMoisture,
                       min: 0,
                       max: 100,
+                      unit: '%',
+                      color: Colors.green,
                       systemName: 'Pump',
-                      isSystemActive: data.soilMoisture < 30,
-                      activeText: 'Watering',
-                      inactiveText: 'Standby',
+                      isSystemActive: provider.systemStatus.isPumpOn,
                     ),
                   ],
                 ),

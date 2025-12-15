@@ -16,7 +16,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<GreenhouseProvider>();
-      context.read<SettingsProvider>().fetchProfiles(provider.apiUrl);
+      final settings = context.read<SettingsProvider>();
+      settings.fetchProfiles(provider.apiUrl);
+      settings.fetchSoilCalibration(provider.apiUrl);
     });
   }
 

@@ -34,12 +34,31 @@ class SettingsProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> fetchSoilCalibration(String apiUrl) async {
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/v1/config/soil'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['dry_adc'] != null && data['wet_adc'] != null) {
+          _dryAdc = (data['dry_adc'] as num).toDouble();
+          _wetAdc = (data['wet_adc'] as num).toDouble();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching calibration: $e');
+    }
+  }
+
   Future<void> saveSoilCalibration(String apiUrl) async {
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/api/v1/config/soil'),
+        Uri.parse('$apiUrl/v1/config/soil'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'dry_adc': _dryAdc, 'wet_adc': _wetAdc}),
+        body: json.encode({
+          'dry_adc': _dryAdc.round(),
+          'wet_adc': _wetAdc.round(),
+        }),
       );
 
       if (response.statusCode != 200) {
@@ -52,7 +71,7 @@ class SettingsProvider with ChangeNotifier {
 
   Future<void> fetchProfiles(String apiUrl) async {
     try {
-      final response = await http.get(Uri.parse('$apiUrl/api/v1/profiles'));
+      final response = await http.get(Uri.parse('$apiUrl/v1/profiles'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _activeProfileName = data['active_profile'] ?? 'Default';
@@ -77,7 +96,7 @@ class SettingsProvider with ChangeNotifier {
   Future<void> activateProfile(String apiUrl, String profileName) async {
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/api/v1/profiles/activate/$profileName'),
+        Uri.parse('$apiUrl/v1/profiles/activate/$profileName'),
       );
 
       if (response.statusCode == 200) {

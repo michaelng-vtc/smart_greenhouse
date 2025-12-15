@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/sensor_data.dart';
+import '../models/system_status.dart';
 import 'settings_provider.dart';
 
 class GreenhouseProvider with ChangeNotifier {
@@ -10,10 +11,13 @@ class GreenhouseProvider with ChangeNotifier {
   // For Raspberry Pi on local network, use something like: 'http://192.168.x.x:5000'
   // For testing on emulator with localhost, use: 'http://10.0.2.2:5000' (Android)
   // For iOS simulator with localhost, use: 'http://127.0.0.1:5000'
-  String _apiUrl = 'http://192.168.1.61:5000'; // Raspberry Pi 4 backend
+  // Assuming the backend is served from /api/public based on the folder structure
+  String _apiUrl = 'http://192.168.1.217/api/public';
 
   SensorData _data = SensorData.initial();
+  SystemStatus _systemStatus = SystemStatus.initial();
   final Map<String, List<Map<String, dynamic>>> _historyData = {};
+  List<Map<String, dynamic>> _fanHistory = [];
   Timer? _timer;
   bool _isConnected = false;
   String? _errorMessage;
@@ -81,6 +85,8 @@ class GreenhouseProvider with ChangeNotifier {
     return _historyData[key] ?? [];
   }
 
+  List<Map<String, dynamic>> get fanHistory => _fanHistory;
+
   bool get isConnected => _isConnected;
   String? get errorMessage => _errorMessage;
   String get apiUrl => _apiUrl;
@@ -91,6 +97,8 @@ class GreenhouseProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  SystemStatus get systemStatus => _systemStatus;
+
   // Connect to the backend API
   void connect() {
     _isConnected = true;
@@ -100,12 +108,16 @@ class GreenhouseProvider with ChangeNotifier {
     // Fetch data every 2 seconds
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _fetchRealData();
+      _fetchSystemStatus();
       _fetchHistoryData();
+      _fetchFanHistory();
     });
 
     // Fetch immediately on connect
     _fetchRealData();
+    _fetchSystemStatus();
     _fetchHistoryData();
+    _fetchFanHistory();
   }
 
   void disconnect() {
@@ -114,26 +126,92 @@ class GreenhouseProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _fetchRealData() async {
+  Future<void> _fetchSystemStatus() async {
     try {
+      // Fetch status for each system
+      final fanResp = await http.get(Uri.parse('$_apiUrl/v1/fan/status'));
+      final curtainResp = await http.get(
+        Uri.parse('$_apiUrl/v1/curtain/status'),
+      );
+      final pumpResp = await http.get(
+        Uri.parse('$_apiUrl/v1/irrigation/status'),
+      );
+      final heaterResp = await http.get(Uri.parse('$_apiUrl/v1/heater/status'));
+      final misterResp = await http.get(Uri.parse('$_apiUrl/v1/mister/status'));
+
+      bool isFanOn = false;
+      bool isCurtainOn = false;
+      bool isPumpOn = false;
+      bool isHeaterOn = false;
+      bool isMisterOn = false;
+
+      if (fanResp.statusCode == 200) {
+        final data = json.decode(fanResp.body);
+        isFanOn = data['status'] == 'ON';
+      }
+      if (curtainResp.statusCode == 200) {
+        final data = json.decode(curtainResp.body);
+        isCurtainOn = data['status'] == 'ON';
+      }
+      if (pumpResp.statusCode == 200) {
+        final data = json.decode(pumpResp.body);
+        isPumpOn = data['status'] == 'ON';
+      }
+      if (heaterResp.statusCode == 200) {
+        final data = json.decode(heaterResp.body);
+        isHeaterOn = data['status'] == 'ON';
+      }
+      if (misterResp.statusCode == 200) {
+        final data = json.decode(misterResp.body);
+        isMisterOn = data['status'] == 'ON';
+      }
+
+      _systemStatus = SystemStatus(
+        isFanOn: isFanOn,
+        isCurtainOn: isCurtainOn,
+        isPumpOn: isPumpOn,
+        isHeaterOn: isHeaterOn,
+        isMisterOn: isMisterOn,
+      );
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching system status: $e');
+      }
+    }
+  }
+
+  Future<void> _fetchRealData() async {
+    final url = '$_apiUrl/v1/latest';
+    try {
+      if (kDebugMode) {
+        print('Fetching data from: $url');
+      }
       final response = await http
-          .get(Uri.parse('$_apiUrl/api/v1/latest'))
+          .get(Uri.parse(url))
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        _data = SensorData.fromJson(jsonData);
-
-        _errorMessage = null;
+        if (jsonData is Map<String, dynamic>) {
+          _data = SensorData.fromJson(jsonData);
+          _errorMessage = null;
+        } else {
+          _errorMessage = 'Invalid JSON format';
+          if (kDebugMode) print('Invalid JSON: $jsonData');
+        }
         notifyListeners();
       } else {
         _errorMessage = 'Server error: ${response.statusCode}';
+        if (kDebugMode) {
+          print('Server error (${response.statusCode}): ${response.body}');
+        }
         notifyListeners();
       }
     } catch (e) {
       _errorMessage = 'Connection failed: ${e.toString()}';
       if (kDebugMode) {
-        print('Error fetching data: $e');
+        print('Error fetching data from $url: $e');
       }
       notifyListeners();
     }
@@ -142,12 +220,13 @@ class GreenhouseProvider with ChangeNotifier {
   Future<void> _fetchHistoryData() async {
     // Fetch history for the last 1 hour (can be adjusted)
     // Note: We fetch 'soil_raw' instead of 'soil_percent' to calculate percentage locally
+    // The backend handles key aliases (e.g. 'hum' -> 'humidity'), so we just request the standard keys.
     final sensorKeys = ['temp', 'humidity', 'co2', 'lux', 'soil_raw'];
 
     try {
       for (var key in sensorKeys) {
         final response = await http
-            .get(Uri.parse('$_apiUrl/api/v1/history/$key?hours=1'))
+            .get(Uri.parse('$_apiUrl/v1/history/$key?hours=1'))
             .timeout(const Duration(seconds: 5));
 
         if (response.statusCode == 200) {
@@ -159,6 +238,24 @@ class GreenhouseProvider with ChangeNotifier {
     } catch (e) {
       if (kDebugMode) {
         print('Error fetching history: $e');
+      }
+    }
+  }
+
+  Future<void> _fetchFanHistory() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_apiUrl/v1/fan/history'))
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body) as List;
+        _fanHistory = List<Map<String, dynamic>>.from(jsonData);
+        notifyListeners();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching fan history: $e');
       }
     }
   }
