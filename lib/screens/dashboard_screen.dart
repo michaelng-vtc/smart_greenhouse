@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/greenhouse_provider.dart';
-import '../widgets/control_card.dart';
-import '../widgets/sensor_card.dart';
 import '../widgets/analog_gauge.dart';
 import '../widgets/api_sensor_chart.dart';
 import 'package:intl/intl.dart';
