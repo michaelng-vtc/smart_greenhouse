@@ -172,9 +172,9 @@ class ApiSensorChart extends StatelessWidget {
 
   List<FlSpot> _buildSpots() {
     if (valueKey == 'temp') {
-      print('Chart building spots for $valueKey. Data count: ${historyData.length}');
+      // print('Chart building spots for $valueKey. Data count: ${historyData.length}');
       if (historyData.isNotEmpty) {
-        print('First data point: ${historyData.first}');
+        // print('First data point: ${historyData.first}');
       }
     }
 

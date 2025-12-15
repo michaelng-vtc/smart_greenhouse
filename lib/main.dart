@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/greenhouse_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/cart_provider.dart';
 import 'screens/main_screen.dart';
 
 void main() {
@@ -22,6 +23,13 @@ class MainApp extends StatelessWidget {
           update: (_, settings, greenhouse) {
             greenhouse!.updateSettings(settings);
             return greenhouse;
+          },
+        ),
+        ChangeNotifierProxyProvider<GreenhouseProvider, CartProvider>(
+          create: (_) => CartProvider(),
+          update: (_, greenhouse, cart) {
+            cart!.updateApiUrl(greenhouse.apiUrl);
+            return cart;
           },
         ),
       ],

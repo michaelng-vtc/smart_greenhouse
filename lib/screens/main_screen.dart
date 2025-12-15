@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'settings_screen.dart';
+import 'shop_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,6 +15,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const DashboardScreen(),
+    const ShopScreen(),
     const SettingsScreen(),
   ];
 
@@ -32,6 +34,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_bag),
+            label: 'Shop',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),

@@ -218,3 +218,39 @@ INSERT INTO config_settings (`key`, `value`) VALUES
     }
 }'),
 ('soil_calib', '{"dry_adc": 3000, "wet_adc": 1200}');
+
+CREATE TABLE IF NOT EXISTS products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    image_url VARCHAR(255),
+    stock INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255),
+    total_amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- Insert sample products
+INSERT INTO products (name, description, price, image_url, stock) VALUES
+('Tomato Seeds', 'Organic heirloom tomato seeds.', 2.99, 'assets/images/tomato_seeds.png', 100),
+('Basil Seeds', 'Fresh sweet basil seeds.', 1.99, 'assets/images/basil_seeds.png', 150),
+('Lettuce Seeds', 'Crisp romaine lettuce seeds.', 2.49, 'assets/images/lettuce_seeds.png', 120),
+('Pepper Seeds', 'Spicy jalapeño pepper seeds.', 3.49, 'assets/images/pepper_seeds.png', 80),
+('Cucumber Seeds', 'Crunchy garden cucumber seeds.', 2.99, 'assets/images/cucumber_seeds.png', 90),
+('Strawberry Seeds', 'Sweet wild strawberry seeds.', 4.99, 'assets/images/strawberry_seeds.png', 60);

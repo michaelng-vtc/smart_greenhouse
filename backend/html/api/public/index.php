@@ -87,6 +87,9 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
     // 4. Config
     $group->get('/config/soil', 'App\Services\Greenhouse\Config:getSoil');
     $group->post('/config/soil', 'App\Services\Greenhouse\Config:setSoil');
+
+    // 5. Shop
+    $group->get('/products', 'App\Services\Shop\Products:getAll');
 });
 
 // Run app

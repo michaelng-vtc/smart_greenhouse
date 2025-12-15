@@ -23,10 +23,10 @@ class GreenhouseProvider with ChangeNotifier {
   String? _errorMessage;
 
   // Reference to SettingsProvider for calibration
-  SettingsProvider? _settings;
+  // SettingsProvider? _settings;
 
   void updateSettings(SettingsProvider settings) {
-    _settings = settings;
+    // _settings = settings;
     notifyListeners();
   }
 
@@ -212,15 +212,32 @@ class GreenhouseProvider with ChangeNotifier {
             .timeout(const Duration(seconds: 5));
 
         if (response.statusCode == 200) {
-          final jsonData = json.decode(response.body) as List;
-          _historyData[key] = List<Map<String, dynamic>>.from(jsonData);
-          
+          final dynamic jsonData = json.decode(response.body);
+          List<dynamic>? dataList;
+
+          if (jsonData is List) {
+            dataList = jsonData;
+          } else if (jsonData is Map<String, dynamic>) {
+            // Handle case where API returns wrapped data like {"temp": [...]}
+            if (jsonData.containsKey(key)) {
+              dataList = jsonData[key];
+            } else if (jsonData.containsKey('data')) {
+              dataList = jsonData['data'];
+            }
+          }
+
+          if (dataList != null) {
+            _historyData[key] = List<Map<String, dynamic>>.from(
+              dataList.map((e) => Map<String, dynamic>.from(e)),
+            );
+          }
+
           if (key == 'temp' && kDebugMode) {
-            print('Fetched temp history: $_historyData[key]');
+            debugPrint('Fetched temp history: ${_historyData[key]?.length} items');
           }
         } else {
           if (kDebugMode) {
-            print('Failed to fetch history for $key: ${response.statusCode}');
+            debugPrint('Failed to fetch history for $key: ${response.statusCode}');
           }
         }
       }
