@@ -12,7 +12,7 @@ class GreenhouseProvider with ChangeNotifier {
   // For testing on emulator with localhost, use: 'http://10.0.2.2:5000' (Android)
   // For iOS simulator with localhost, use: 'http://127.0.0.1:5000'
   // Assuming the backend is served from /api/public based on the folder structure
-  String _apiUrl = 'http://192.168.1.217/api/public';
+  String _apiUrl = 'http://192.168.56.101/api/public';
 
   SensorData _data = SensorData.initial();
   SystemStatus _systemStatus = SystemStatus.initial();
@@ -31,58 +31,42 @@ class GreenhouseProvider with ChangeNotifier {
   }
 
   SensorData get data {
-    if (_settings == null) return _data;
-
-    // Calculate soil moisture percentage based on calibration
-    // Formula: (raw - dry) / (wet - dry) * 100
-    // But usually dry > wet for capacitive sensors, so: (dry - raw) / (dry - wet) * 100
-    // We clamp the result between 0 and 100
-    double soilPercent = 0.0;
-    if (_settings!.dryAdc != _settings!.wetAdc) {
-      soilPercent =
-          ((_settings!.dryAdc - _data.soilRaw) /
-              (_settings!.dryAdc - _settings!.wetAdc)) *
-          100;
-      soilPercent = soilPercent.clamp(0.0, 100.0);
-    }
-
-    return _data.copyWith(soilMoisture: soilPercent);
+    // Return data directly from API without local recalculation
+    return _data;
   }
 
   // Get history for a specific sensor as a list of timestamped values
   List<Map<String, dynamic>> getHistory(String key) {
-    // If requesting soil percent history, calculate it from soil_raw history
-    if (key == 'soil_percent' && _settings != null) {
-      final rawHistory = _historyData['soil_raw'] ?? [];
+    // If requesting soil percent history
+    if (key == 'soil_percent') {
+      // Use server-provided soil_percent directly
+      final percentHistory = _historyData['soil_percent'];
+      if (percentHistory != null && percentHistory.isNotEmpty) {
+        return percentHistory.map((point) {
+          final newPoint = Map<String, dynamic>.from(point);
+          // Ensure the key 'soil_percent' exists (map 'value' to 'soil_percent')
+          if (newPoint['soil_percent'] == null && newPoint['value'] != null) {
+            newPoint['soil_percent'] = newPoint['value'];
+          }
+          return newPoint;
+        }).toList();
+      }
+      return [];
+    }
 
-      return rawHistory.map((point) {
+    // For other sensors, ensure the key exists if it's just 'value'
+    final data = _historyData[key];
+    if (data != null) {
+      return data.map((point) {
         final newPoint = Map<String, dynamic>.from(point);
-        double rawValue = 0.0;
-
-        // Extract raw value (it might be under 'soil_raw' or 'value')
-        if (newPoint['soil_raw'] is num) {
-          rawValue = (newPoint['soil_raw'] as num).toDouble();
-        } else if (newPoint['value'] is num) {
-          rawValue = (newPoint['value'] as num).toDouble();
+        if (newPoint[key] == null && newPoint['value'] != null) {
+          newPoint[key] = newPoint['value'];
         }
-
-        // Calculate percentage
-        double soilPercent = 0.0;
-        if (_settings!.dryAdc != _settings!.wetAdc) {
-          soilPercent =
-              ((_settings!.dryAdc - rawValue) /
-                  (_settings!.dryAdc - _settings!.wetAdc)) *
-              100;
-          soilPercent = soilPercent.clamp(0.0, 100.0);
-        }
-
-        // Return as 'soil_percent' for the chart
-        newPoint['soil_percent'] = soilPercent;
         return newPoint;
       }).toList();
     }
 
-    return _historyData[key] ?? [];
+    return [];
   }
 
   List<Map<String, dynamic>> get fanHistory => _fanHistory;
@@ -218,20 +202,26 @@ class GreenhouseProvider with ChangeNotifier {
   }
 
   Future<void> _fetchHistoryData() async {
-    // Fetch history for the last 1 hour (can be adjusted)
-    // Note: We fetch 'soil_raw' instead of 'soil_percent' to calculate percentage locally
-    // The backend handles key aliases (e.g. 'hum' -> 'humidity'), so we just request the standard keys.
-    final sensorKeys = ['temp', 'humidity', 'co2', 'lux', 'soil_raw'];
+    // Fetch history for the last 12 hours
+    final sensorKeys = ['temp', 'humidity', 'co2', 'lux', 'soil_percent'];
 
     try {
       for (var key in sensorKeys) {
         final response = await http
-            .get(Uri.parse('$_apiUrl/v1/history/$key?hours=1'))
+            .get(Uri.parse('$_apiUrl/v1/history/$key?hours=12'))
             .timeout(const Duration(seconds: 5));
 
         if (response.statusCode == 200) {
           final jsonData = json.decode(response.body) as List;
           _historyData[key] = List<Map<String, dynamic>>.from(jsonData);
+          
+          if (key == 'temp' && kDebugMode) {
+            print('Fetched temp history: $_historyData[key]');
+          }
+        } else {
+          if (kDebugMode) {
+            print('Failed to fetch history for $key: ${response.statusCode}');
+          }
         }
       }
       notifyListeners();

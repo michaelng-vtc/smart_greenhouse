@@ -73,17 +73,37 @@ class SettingsProvider with ChangeNotifier {
     try {
       final response = await http.get(Uri.parse('$apiUrl/v1/profiles'));
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final dynamic decodedData = json.decode(response.body);
+
+        // Guard against receiving a List instead of a Map
+        if (decodedData is! Map<String, dynamic>) {
+          debugPrint('Error: Expected Map but got ${decodedData.runtimeType}');
+          return;
+        }
+
+        final data = decodedData;
         _activeProfileName = data['active_profile'] ?? 'Default';
 
-        final profilesMap = data['profiles'] as Map<String, dynamic>;
-        _availableProfiles = profilesMap.keys.toList();
+        if (data['profiles'] is Map<String, dynamic>) {
+          final profilesMap = data['profiles'] as Map<String, dynamic>;
+          _availableProfiles = profilesMap.keys.toList();
 
-        // Update current setpoints based on active profile
-        if (profilesMap.containsKey(_activeProfileName)) {
-          _currentSetpoints = ClimateSetpoints.fromJson(
-            profilesMap[_activeProfileName],
-          );
+          // Update current setpoints based on active profile
+          if (profilesMap.containsKey(_activeProfileName)) {
+            // The profile map value might be the setpoints directly OR a wrapper
+            final profileData = profilesMap[_activeProfileName];
+            if (profileData is Map<String, dynamic>) {
+              if (profileData.containsKey('setpoints')) {
+                 _currentSetpoints = ClimateSetpoints.fromJson(profileData['setpoints']);
+              } else {
+                 // Assume it's the setpoints directly if no 'setpoints' key
+                 _currentSetpoints = ClimateSetpoints.fromJson(profileData);
+              }
+            }
+          }
+        } else {
+          // Handle case where profiles might be empty list or null
+          _availableProfiles = ['Default'];
         }
 
         notifyListeners();
@@ -102,8 +122,21 @@ class SettingsProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _activeProfileName = profileName;
+        
+        // The API returns 'setpoints' directly in the response, but it might be the full profile object
         if (data['setpoints'] != null) {
-          _currentSetpoints = ClimateSetpoints.fromJson(data['setpoints']);
+          final responseData = data['setpoints'];
+          if (responseData is Map<String, dynamic> && responseData.containsKey('setpoints')) {
+             // It's the full profile object with nested setpoints
+             _currentSetpoints = ClimateSetpoints.fromJson(responseData['setpoints']);
+          } else {
+             // It's likely the setpoints map directly
+             _currentSetpoints = ClimateSetpoints.fromJson(responseData);
+          }
+        } else {
+          // Fallback: try to find it in our local list if API didn't return it
+          // This handles the case where we might have the data already
+          await fetchProfiles(apiUrl);
         }
         notifyListeners();
       }

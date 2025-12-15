@@ -13,7 +13,7 @@ CLIENT_ID = "pi_controller"
 
 # Remote API Configuration (CentOS 7 PHP Backend)
 # Replace with your actual CentOS server IP
-REMOTE_API_BASE = "http://192.168.56.217/api/public/v1" 
+REMOTE_API_BASE = "http://192.168.1.217/api/public/v1" 
 
 TOPICS = [
     "greenhouse/sensor/air_th",

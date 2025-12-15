@@ -55,6 +55,8 @@ class SensorData {
 
     double getValue(dynamic data) {
       if (data == null) return 0.0;
+      if (data is num) return data.toDouble();
+      if (data is String) return double.tryParse(data) ?? 0.0;
       if (data is Map) {
         var value = data['value'];
         if (value == null) return 0.0;

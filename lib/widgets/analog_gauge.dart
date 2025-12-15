@@ -130,7 +130,7 @@ class AnalogGauge extends StatelessWidget {
   Widget _buildSystemStatus(String name, bool isActive) {
     return Container(
       margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isActive
             ? color.withValues(alpha: 0.1)
@@ -145,14 +145,14 @@ class AnalogGauge extends StatelessWidget {
         children: [
           Icon(
             isActive ? Icons.power_settings_new : Icons.circle_outlined,
-            size: 8,
+            size: 10,
             color: isActive ? color : Colors.grey,
           ),
-          const SizedBox(width: 2),
+          const SizedBox(width: 4),
           Text(
             name,
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
               color: isActive ? color : Colors.grey,
             ),
