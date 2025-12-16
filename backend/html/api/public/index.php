@@ -100,6 +100,52 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
     $group->get('/products', 'App\Services\Shop\Products:getAll');
     $group->post('/orders', 'App\Services\Shop\Orders:create');
     $group->get('/orders/user/{user_id}', 'App\Services\Shop\Orders:getUserOrders');
+
+    // 6. Plant Info
+    $group->get('/plant-info', 'App\Services\Plant\PlantInfo:getAll');
+    $group->post('/plant-info', 'App\Services\Plant\PlantInfo:create');
+    $group->get('/plant-info/{id}/comments', 'App\Services\Plant\PlantInfo:getComments');
+    $group->post('/plant-info/{id}/comments', 'App\Services\Plant\PlantInfo:addComment');
+
+    // 7. Chat
+    $group->get('/chat/users', 'App\Services\Chat\Chat:getUsers');
+    $group->get('/chat/messages/{other_user_id}', 'App\Services\Chat\Chat:getMessages');
+    $group->post('/chat/messages', 'App\Services\Chat\Chat:sendMessage');
+
+    // 8. Friends
+    $group->post('/friends/request', function ($request, $response) {
+        $data = $request->getParsedBody();
+        $db = (new \App\Config\Database())->connect();
+        $service = new \App\Services\Friends\Friends($db);
+        $result = $service->addFriend($data['user_id'], $data['friend_username']);
+        $response->getBody()->write(json_encode($result));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(isset($result['error']) ? 400 : 200);
+    });
+
+    $group->get('/friends/{user_id}', function ($request, $response, $args) {
+        $db = (new \App\Config\Database())->connect();
+        $service = new \App\Services\Friends\Friends($db);
+        $result = $service->getFriends($args['user_id']);
+        $response->getBody()->write(json_encode($result));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    $group->get('/friends/requests/{user_id}', function ($request, $response, $args) {
+        $db = (new \App\Config\Database())->connect();
+        $service = new \App\Services\Friends\Friends($db);
+        $result = $service->getPendingRequests($args['user_id']);
+        $response->getBody()->write(json_encode($result));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    $group->post('/friends/accept', function ($request, $response) {
+        $data = $request->getParsedBody();
+        $db = (new \App\Config\Database())->connect();
+        $service = new \App\Services\Friends\Friends($db);
+        $result = $service->acceptRequest($data['user_id'], $data['request_id']);
+        $response->getBody()->write(json_encode($result));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(isset($result['error']) ? 400 : 200);
+    });
 });
 
 // Run app

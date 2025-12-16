@@ -67,6 +67,30 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS plant_info (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    image_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS plant_info_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plant_info_id INT NOT NULL,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (plant_info_id) REFERENCES plant_info(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Insert sample data for plant_info
+INSERT INTO plant_info (title, content, image_url) VALUES
+('Tomato Care Tips', 'Tomatoes need consistent watering and plenty of sunlight. Prune suckers to encourage fruit growth.', 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Tomato_je.jpg/1200px-Tomato_je.jpg'),
+('Basil Harvesting', 'Harvest basil leaves regularly to encourage bushier growth. Pinch off flowers to maintain flavor.', 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Basil-Basilico-Ocimum_basilicum-albahaca.jpg/1200px-Basil-Basilico-Ocimum_basilicum-albahaca.jpg'),
+('Pest Control: Aphids', 'Aphids can be controlled with neem oil or a strong blast of water. Ladybugs are also natural predators.', 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Aphid_on_leaf05.jpg/1200px-Aphid_on_leaf05.jpg');
+
 -- Insert sample data for sensor_readings
 INSERT INTO sensor_readings (timestamp, topic, value_key, value) VALUES
 (DATE_SUB(NOW(), INTERVAL 90 MINUTE), 'greenhouse/sensor/air_th', 'temp', 22.1),
@@ -256,6 +280,27 @@ CREATE TABLE IF NOT EXISTS order_items (
     price DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_id INT NOT NULL,
+    receiver_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS friends (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    friend_id INT NOT NULL,
+    status ENUM('pending', 'accepted') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_friendship (user_id, friend_id)
 );
 
 -- Insert sample products

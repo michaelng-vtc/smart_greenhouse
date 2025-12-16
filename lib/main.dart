@@ -5,6 +5,9 @@ import 'providers/greenhouse_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/plant_info_provider.dart';
+import 'providers/chat_provider.dart';
+import 'providers/friend_provider.dart';
 import 'screens/login_screen.dart';
 
 void main() {
@@ -32,6 +35,27 @@ class MainApp extends StatelessWidget {
           update: (_, greenhouse, cart) {
             cart!.updateApiUrl(greenhouse.apiUrl);
             return cart;
+          },
+        ),
+        ChangeNotifierProxyProvider<GreenhouseProvider, PlantInfoProvider>(
+          create: (_) => PlantInfoProvider(),
+          update: (_, greenhouse, plantInfo) {
+            plantInfo!.setApiUrl(greenhouse.apiUrl);
+            return plantInfo;
+          },
+        ),
+        ChangeNotifierProxyProvider<GreenhouseProvider, ChatProvider>(
+          create: (_) => ChatProvider(),
+          update: (_, greenhouse, chat) {
+            chat!.setApiUrl(greenhouse.apiUrl);
+            return chat;
+          },
+        ),
+        ChangeNotifierProxyProvider<GreenhouseProvider, FriendProvider>(
+          create: (_) => FriendProvider(),
+          update: (_, greenhouse, friend) {
+            friend!.setApiUrl(greenhouse.apiUrl);
+            return friend;
           },
         ),
       ],

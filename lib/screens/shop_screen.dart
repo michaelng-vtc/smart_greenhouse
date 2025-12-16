@@ -28,7 +28,7 @@ class ShopScreen extends StatelessWidget {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Consumer<CartProvider>(
-        builder: (_, cart, __) => cart.itemCount > 0
+        builder: (_, cart, child) => cart.itemCount > 0
             ? FloatingActionButton.extended(
                 onPressed: () {
                   Navigator.of(context).push(

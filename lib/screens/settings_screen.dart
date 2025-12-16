@@ -84,8 +84,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               oldPasswordController.text,
                               newPasswordController.text,
                             );
+
+                        if (!context.mounted) return;
+
                         setState(() => isLoading = false);
-                        if (success && mounted) {
+                        if (success) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -93,7 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               backgroundColor: Colors.green,
                             ),
                           );
-                        } else if (mounted) {
+                        } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -152,8 +155,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         final success = await context
                             .read<AuthProvider>()
                             .changeUsername(newUsernameController.text);
+
+                        if (!context.mounted) return;
+
                         setState(() => isLoading = false);
-                        if (success && mounted) {
+                        if (success) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -161,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               backgroundColor: Colors.green,
                             ),
                           );
-                        } else if (mounted) {
+                        } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
