@@ -2,12 +2,16 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/product.dart';
+import '../models/order.dart';
 
 class CartProvider with ChangeNotifier {
   String _apiUrl = '';
   List<Product> _products = [];
+  List<Order> _orders = [];
   final Map<int, CartItem> _items = {};
   bool _isLoading = false;
+
+  List<Order> get orders => _orders;
 
   void updateApiUrl(String url) {
     _apiUrl = url;
@@ -67,10 +71,7 @@ class CartProvider with ChangeNotifier {
         ),
       );
     } else {
-      _items.putIfAbsent(
-        product.id,
-        () => CartItem(product: product),
-      );
+      _items.putIfAbsent(product.id, () => CartItem(product: product));
     }
     notifyListeners();
   }
@@ -101,5 +102,74 @@ class CartProvider with ChangeNotifier {
   void clear() {
     _items.clear();
     notifyListeners();
+  }
+
+  Future<void> fetchOrders(int userId) async {
+    if (_apiUrl.isEmpty) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/orders/user/$userId'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _orders = data.map((item) => Order.fromJson(item)).toList();
+      } else {
+        if (kDebugMode) {
+          print('Failed to fetch orders: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching orders: $e');
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> submitOrder(int userId) async {
+    if (_apiUrl.isEmpty || _items.isEmpty) return false;
+
+    try {
+      final orderItems = _items.values
+          .map(
+            (cartItem) => {
+              'product_id': cartItem.product.id,
+              'quantity': cartItem.quantity,
+              'price': cartItem.product.price,
+            },
+          )
+          .toList();
+
+      final response = await http.post(
+        Uri.parse('$_apiUrl/v1/orders'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'items': orderItems,
+          'total_amount': totalAmount,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        clear();
+        return true;
+      } else {
+        if (kDebugMode) {
+          print('Failed to submit order: ${response.statusCode}');
+        }
+        return false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error submitting order: $e');
+      }
+      return false;
+    }
   }
 }

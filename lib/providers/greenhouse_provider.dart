@@ -12,7 +12,7 @@ class GreenhouseProvider with ChangeNotifier {
   // For testing on emulator with localhost, use: 'http://10.0.2.2:5000' (Android)
   // For iOS simulator with localhost, use: 'http://127.0.0.1:5000'
   // Assuming the backend is served from /api/public based on the folder structure
-  String _apiUrl = 'http://192.168.56.101/api/public';
+  String _apiUrl = 'http://192.168.1.217/api/public';
 
   SensorData _data = SensorData.initial();
   SystemStatus _systemStatus = SystemStatus.initial();
@@ -231,13 +231,11 @@ class GreenhouseProvider with ChangeNotifier {
               dataList.map((e) => Map<String, dynamic>.from(e)),
             );
           }
-
-          if (key == 'temp' && kDebugMode) {
-            debugPrint('Fetched temp history: ${_historyData[key]?.length} items');
-          }
         } else {
           if (kDebugMode) {
-            debugPrint('Failed to fetch history for $key: ${response.statusCode}');
+            debugPrint(
+              'Failed to fetch history for $key: ${response.statusCode}',
+            );
           }
         }
       }

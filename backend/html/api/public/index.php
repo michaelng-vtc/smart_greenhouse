@@ -45,6 +45,14 @@ foreach (glob(__DIR__ . '/../src/services/*/*.php') as $filename) {
 
 // Greenhouse Routes (API v1)
 $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
+    // Auth
+    $group->post('/auth/register', 'App\Services\Auth\Register');
+    $group->post('/auth/verify', 'App\Services\Auth\Verify');
+    $group->post('/auth/login', 'App\Services\Auth\Login');
+    $group->post('/auth/resend', 'App\Services\Auth\ResendCode');
+    $group->post('/auth/change-password', 'App\Services\Auth\ChangePassword');
+    $group->post('/auth/change-username', 'App\Services\Auth\ChangeUsername');
+
     // 1. Sensor Data
     $group->post('/sensors', 'App\Services\Greenhouse\SensorData');
     $group->get('/latest', 'App\Services\Greenhouse\GetLatestData:getAll');
@@ -90,6 +98,8 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
 
     // 5. Shop
     $group->get('/products', 'App\Services\Shop\Products:getAll');
+    $group->post('/orders', 'App\Services\Shop\Orders:create');
+    $group->get('/orders/user/{user_id}', 'App\Services\Shop\Orders:getUserOrders');
 });
 
 // Run app

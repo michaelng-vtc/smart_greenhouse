@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/auth_provider.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.read<AuthProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Cart'),
@@ -16,9 +19,7 @@ class CartScreen extends StatelessWidget {
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {
           if (cart.items.isEmpty) {
-            return const Center(
-              child: Text('Your cart is empty'),
-            );
+            return const Center(child: Text('Your cart is empty'));
           }
           return Column(
             children: [
@@ -27,6 +28,7 @@ class CartScreen extends StatelessWidget {
                   itemCount: cart.items.length,
                   itemBuilder: (context, index) {
                     final cartItem = cart.items.values.toList()[index];
+                    final productId = cart.items.keys.toList()[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(
                         horizontal: 15,
@@ -48,7 +50,23 @@ class CartScreen extends StatelessWidget {
                           subtitle: Text(
                             'Total: \$${(cartItem.product.price * cartItem.quantity).toStringAsFixed(2)}',
                           ),
-                          trailing: Text('${cartItem.quantity} x'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline),
+                                onPressed: () =>
+                                    cart.removeSingleItem(productId),
+                                color: Colors.red,
+                              ),
+                              Text('${cartItem.quantity}'),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline),
+                                onPressed: () => cart.addItem(cartItem.product),
+                                color: Colors.green,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -62,32 +80,58 @@ class CartScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Total',
-                        style: TextStyle(fontSize: 20),
-                      ),
+                      const Text('Total', style: TextStyle(fontSize: 20)),
                       const Spacer(),
                       Chip(
                         label: Text(
                           '\$${cart.totalAmount.toStringAsFixed(2)}',
                           style: TextStyle(
-                            color: Theme.of(context).primaryTextTheme.titleLarge?.color,
+                            color: Theme.of(
+                              context,
+                            ).primaryTextTheme.titleLarge?.color,
                           ),
                         ),
                         backgroundColor: Theme.of(context).primaryColor,
                       ),
-                      TextButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Order placed successfully!'),
-                            ),
-                          );
-                          cart.clear();
-                          Navigator.of(context).pop();
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final userId = authProvider.userId;
+                          if (userId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please login to place an order'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          final success = await cart.submitOrder(userId);
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Order placed successfully!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            Navigator.of(context).pop();
+                          } else if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to place order'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
-                        child: const Text('ORDER NOW'),
-                      )
+                        icon: const Icon(Icons.shopping_bag),
+                        label: const Text('ORDER NOW'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                 ),

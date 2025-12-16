@@ -8,6 +8,7 @@ class AnalogGauge extends StatelessWidget {
   final String title;
   final String unit;
   final Color color;
+  final IconData icon;
   final String? systemName;
   final bool? isSystemActive;
   final String? secondarySystemName;
@@ -21,6 +22,7 @@ class AnalogGauge extends StatelessWidget {
     required this.title,
     required this.unit,
     required this.color,
+    required this.icon,
     this.systemName,
     this.isSystemActive,
     this.secondarySystemName,
@@ -30,10 +32,10 @@ class AnalogGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 0.1),
@@ -46,15 +48,30 @@ class AnalogGauge extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 18, color: color),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
           Expanded(
             child: LayoutBuilder(
@@ -74,29 +91,26 @@ class AnalogGauge extends StatelessWidget {
                       color: color,
                     ),
                     child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: size * 0.25),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              value.toStringAsFixed(1),
-                              style: TextStyle(
-                                fontSize: size * 0.18,
-                                fontWeight: FontWeight.bold,
-                                color: color,
-                              ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            value.toStringAsFixed(1),
+                            style: TextStyle(
+                              fontSize: size * 0.15,
+                              fontWeight: FontWeight.bold,
+                              color: color,
                             ),
-                            Text(
-                              unit,
-                              style: TextStyle(
-                                fontSize: size * 0.1,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[500],
-                              ),
+                          ),
+                          Text(
+                            unit,
+                            style: TextStyle(
+                              fontSize: size * 0.13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[500],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -104,57 +118,84 @@ class AnalogGauge extends StatelessWidget {
               },
             ),
           ),
-          if (systemName != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildSystemStatus(systemName!, isSystemActive ?? false),
-                if (secondarySystemName != null) ...[
-                  const SizedBox(width: 4),
-                  _buildSystemStatus(
-                    secondarySystemName!,
-                    isSecondarySystemActive ?? false,
-                  ),
-                ],
-              ],
-            )
-          else
-            const SizedBox(
-              height: 20,
-            ), // Spacer to align with cards that have system info
+          _buildFooter(),
         ],
       ),
     );
   }
 
-  Widget _buildSystemStatus(String name, bool isActive) {
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive
-            ? color.withValues(alpha: 0.1)
-            : Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isActive ? color.withValues(alpha: 0.5) : Colors.transparent,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+  Widget _buildFooter() {
+    if (systemName == null && secondarySystemName == null) {
+      return const SizedBox(height: 32);
+    }
+
+    if (secondarySystemName != null) {
+      return Row(
         children: [
-          Icon(
-            isActive ? Icons.power_settings_new : Icons.circle_outlined,
-            size: 10,
-            color: isActive ? color : Colors.grey,
+          Expanded(
+            child: _buildSystemStatus(
+              systemName!,
+              isSystemActive ?? false,
+              _getSystemColor(systemName!),
+            ),
           ),
           const SizedBox(width: 4),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isActive ? color : Colors.grey,
+          Expanded(
+            child: _buildSystemStatus(
+              secondarySystemName!,
+              isSecondarySystemActive ?? false,
+              _getSystemColor(secondarySystemName!),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return _buildSystemStatus(
+      systemName!,
+      isSystemActive ?? false,
+      _getSystemColor(systemName!),
+    );
+  }
+
+  Color _getSystemColor(String systemName) {
+    switch (systemName) {
+      case 'Heater':
+        return Colors.red;
+      case 'Mister':
+        return Colors.blue;
+      default:
+        return color;
+    }
+  }
+
+  Widget _buildSystemStatus(String name, bool isActive, Color systemColor) {
+    Color bgColor = isActive ? systemColor : Colors.grey.withValues(alpha: 0.1);
+    Color contentColor = isActive ? Colors.white : Colors.grey;
+    IconData statusIcon = isActive ? Icons.settings : Icons.power_off_outlined;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(statusIcon, size: 12, color: contentColor),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text(
+              name,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: contentColor,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -180,14 +221,14 @@ class _GaugePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2;
-    final startAngle = 135 * math.pi / 180;
-    final sweepAngle = 270 * math.pi / 180;
+    const startAngle = -90 * math.pi / 180;
+    const sweepAngle = 360 * math.pi / 180;
 
     // Draw background arc
     final backgroundPaint = Paint()
       ..color = Colors.grey.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 15
+      ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
 
     canvas.drawArc(
@@ -202,7 +243,7 @@ class _GaugePainter extends CustomPainter {
     final valuePaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 15
+      ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
 
     final clampedValue = value.clamp(min, max);

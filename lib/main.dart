@@ -4,7 +4,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/greenhouse_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/cart_provider.dart';
-import 'screens/main_screen.dart';
+import 'providers/auth_provider.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(const MainApp());
@@ -17,6 +18,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProxyProvider<SettingsProvider, GreenhouseProvider>(
           create: (_) => GreenhouseProvider(),
@@ -49,7 +51,7 @@ class MainApp extends StatelessWidget {
               Locale('en'), // English
               Locale('zh'), // Chinese
             ],
-            home: const MainScreen(),
+            home: const LoginScreen(),
           );
         },
       ),

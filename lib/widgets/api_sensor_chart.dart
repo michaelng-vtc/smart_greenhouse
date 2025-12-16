@@ -34,14 +34,22 @@ class ApiSensorChart extends StatelessWidget {
       if (minX == maxX) {
         maxX = minX + 1000; // Avoid division by zero
       }
-      
+
       // Auto-expand Y axis if data is out of bounds
       final dataMinY = spots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
       final dataMaxY = spots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
-      
-      if (dataMinY < effectiveMinY) effectiveMinY = dataMinY - 5;
-      if (dataMaxY > effectiveMaxY) effectiveMaxY = dataMaxY + 5;
+
+      // Dynamic padding based on range magnitude
+      double range = maxY - minY;
+      if (range <= 0) range = 10;
+      double padding = range * 0.1; // 10% padding
+
+      if (dataMinY < effectiveMinY) effectiveMinY = dataMinY - padding;
+      if (dataMaxY > effectiveMaxY) effectiveMaxY = dataMaxY + padding;
     }
+
+    double yInterval = (effectiveMaxY - effectiveMinY) / 4;
+    if (yInterval <= 0) yInterval = 1.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -78,8 +86,8 @@ class ApiSensorChart extends StatelessWidget {
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: true,
-                        verticalInterval: (maxX - minX) / 4,
-                        horizontalInterval: (effectiveMaxY - effectiveMinY) / 5,
+                        verticalInterval: (maxX - minX) / 3,
+                        horizontalInterval: yInterval,
                         getDrawingHorizontalLine: (value) {
                           return FlLine(
                             color: Colors.grey[200],
@@ -105,7 +113,7 @@ class ApiSensorChart extends StatelessWidget {
                           sideTitles: SideTitles(
                             showTitles: true,
                             reservedSize: 30,
-                            interval: (maxX - minX) / 4,
+                            interval: (maxX - minX) / 3,
                             getTitlesWidget: (value, meta) {
                               if (value < minX || value > maxX) {
                                 return const SizedBox.shrink();
@@ -129,17 +137,27 @@ class ApiSensorChart extends StatelessWidget {
                         leftTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            interval: (effectiveMaxY - effectiveMinY) / 5,
+                            interval: yInterval,
                             getTitlesWidget: (value, meta) {
+                              if (value < effectiveMinY ||
+                                  value > effectiveMaxY) {
+                                return const SizedBox.shrink();
+                              }
+                              String text;
+                              if (effectiveMaxY - effectiveMinY < 10) {
+                                text = value.toStringAsFixed(1);
+                              } else {
+                                text = value.toInt().toString();
+                              }
                               return Text(
-                                value.toInt().toString(),
+                                text,
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 10,
                                 ),
                               );
                             },
-                            reservedSize: 30,
+                            reservedSize: 40,
                           ),
                         ),
                       ),
@@ -181,8 +199,12 @@ class ApiSensorChart extends StatelessWidget {
     final spots = historyData.map((data) {
       double value = 0.0;
       if (data[valueKey] != null) {
-        value =
-            (data[valueKey] is num) ? (data[valueKey] as num).toDouble() : 0.0;
+        final rawValue = data[valueKey];
+        if (rawValue is num) {
+          value = rawValue.toDouble();
+        } else if (rawValue is String) {
+          value = double.tryParse(rawValue) ?? 0.0;
+        }
       }
 
       DateTime ts = DateTime.now();
@@ -200,7 +222,7 @@ class ApiSensorChart extends StatelessWidget {
     if (spots.length > 10) {
       return spots.sublist(spots.length - 10);
     }
-    
+
     return spots;
   }
 }

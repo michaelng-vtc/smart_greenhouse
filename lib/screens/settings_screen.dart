@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/greenhouse_provider.dart';
+import '../providers/auth_provider.dart';
+import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -25,6 +27,167 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  void _logout() {
+    context.read<AuthProvider>().logout();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _showChangePasswordDialog() async {
+    final oldPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Change Password'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: oldPasswordController,
+                  decoration: const InputDecoration(labelText: 'Old Password'),
+                  obscureText: true,
+                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                ),
+                TextFormField(
+                  controller: newPasswordController,
+                  decoration: const InputDecoration(labelText: 'New Password'),
+                  obscureText: true,
+                  validator: (value) =>
+                      value!.length < 6 ? 'Min 6 chars' : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isLoading = true);
+                        final success = await context
+                            .read<AuthProvider>()
+                            .changePassword(
+                              oldPasswordController.text,
+                              newPasswordController.text,
+                            );
+                        setState(() => isLoading = false);
+                        if (success && mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password changed successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                context.read<AuthProvider>().errorMessage ??
+                                    'Failed',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Change'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showChangeUsernameDialog() async {
+    final newUsernameController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Change Username'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: newUsernameController,
+              decoration: const InputDecoration(labelText: 'New Username'),
+              validator: (value) => value!.isEmpty ? 'Required' : null,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isLoading = true);
+                        final success = await context
+                            .read<AuthProvider>()
+                            .changeUsername(newUsernameController.text);
+                        setState(() => isLoading = false);
+                        if (success && mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Username changed successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                context.read<AuthProvider>().errorMessage ??
+                                    'Failed',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Change'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final apiUrl = context.read<GreenhouseProvider>().apiUrl;
@@ -41,6 +204,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              _buildSectionHeader('User Profile'),
+              Card(
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.person),
+                      title: const Text('Change Username'),
+                      subtitle: Text(
+                        context.watch<AuthProvider>().username ?? '',
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: _showChangeUsernameDialog,
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.lock),
+                      title: const Text('Change Password'),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: _showChangePasswordDialog,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
               _buildSectionHeader('Plant Profile'),
               Card(
                 child: Padding(
@@ -176,6 +363,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 max: (settings.dryAdc - 50).clamp(0.0, 4095.0),
                 divisions: 4095,
               ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Logout'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade50,
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
             ],
           );
         },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import 'cart_screen.dart';
+import 'orders_screen.dart';
 
 class ShopScreen extends StatelessWidget {
   const ShopScreen({super.key});
@@ -14,43 +15,52 @@ class ShopScreen extends StatelessWidget {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
-          Consumer<CartProvider>(
-            builder: (_, cart, ch) => Badge(
-              label: Text(cart.itemCount.toString()),
-              isLabelVisible: cart.itemCount > 0,
-              child: ch!,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.shopping_cart),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CartScreen()),
-                );
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'My Orders',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const OrdersScreen()),
+              );
+            },
           ),
         ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Consumer<CartProvider>(
+        builder: (_, cart, __) => cart.itemCount > 0
+            ? FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const CartScreen()),
+                  );
+                },
+                backgroundColor: Colors.green,
+                icon: const Icon(Icons.shopping_cart),
+                label: Text('View Cart (${cart.itemCount})'),
+              )
+            : const SizedBox.shrink(),
       ),
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {
           if (cart.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           if (cart.products.isEmpty) {
-             return Center(
-               child: Column(
-                 mainAxisAlignment: MainAxisAlignment.center,
-                 children: [
-                   const Text('No products found.'),
-                   const SizedBox(height: 10),
-                   ElevatedButton(
-                     onPressed: () => cart.fetchProducts(),
-                     child: const Text('Retry'),
-                   )
-                 ],
-               ),
-             );
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('No products found.'),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () => cart.fetchProducts(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
           }
 
           return GridView.builder(
@@ -137,7 +147,9 @@ class ShopScreen extends StatelessWidget {
                                   ),
                                   onPressed: () {
                                     cart.addItem(product);
-                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).hideCurrentSnackBar();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
