@@ -96,6 +96,12 @@ class ShopScreen extends StatelessWidget {
             itemCount: displayProducts.length,
             itemBuilder: (context, index) {
               final product = displayProducts[index];
+              final String finalImageUrl = product.imageUrl.startsWith('http')
+                  ? product.imageUrl
+                  : '${cart.apiUrl}/${product.imageUrl}';
+              debugPrint(
+                'DEBUG: Product[${product.name}] Link -> $finalImageUrl',
+              );
               return Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(
@@ -214,6 +220,17 @@ class ShopScreen extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${AppLocalizations.of(context).stockQuantity}: ${product.stock}',
+                            style: TextStyle(
+                              color: product.stock > 0
+                                  ? Colors.grey[800]
+                                  : Colors.red,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -228,7 +245,9 @@ class ShopScreen extends StatelessWidget {
                               ),
                               CircleAvatar(
                                 radius: 14,
-                                backgroundColor: Colors.green,
+                                backgroundColor: product.stock > 0
+                                    ? Colors.green
+                                    : Colors.grey,
                                 child: IconButton(
                                   padding: EdgeInsets.zero,
                                   icon: const Icon(
@@ -236,20 +255,26 @@ class ShopScreen extends StatelessWidget {
                                     size: 18,
                                     color: Colors.white,
                                   ),
-                                  onPressed: () {
-                                    cart.addItem(product);
-                                    ScaffoldMessenger.of(
-                                      context,
-                                    ).hideCurrentSnackBar();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${AppLocalizations.of(context).addedToCart}: ${product.name}',
-                                        ),
-                                        duration: const Duration(seconds: 1),
-                                      ),
-                                    );
-                                  },
+                                  onPressed: product.stock > 0
+                                      ? () {
+                                          cart.addItem(product);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${AppLocalizations.of(context).addedToCart}: ${product.name}',
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 1,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      : null,
                                 ),
                               ),
                             ],

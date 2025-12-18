@@ -93,6 +93,7 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
     $group->delete('/products/{id}', 'App\Services\Shop\Products:delete');
     $group->post('/orders', 'App\Services\Shop\Orders:create');
     $group->get('/orders/user/{user_id}', 'App\Services\Shop\Orders:getUserOrders');
+    $group->get('/orders/sales/{user_id}', 'App\Services\Shop\Orders:getSales');
 
     // 6. Plant Info
     $group->get('/plant-info', 'App\Services\Plant\PlantInfo:getAll');

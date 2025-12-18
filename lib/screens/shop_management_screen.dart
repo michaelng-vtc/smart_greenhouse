@@ -22,6 +22,7 @@ class _ShopManagementScreenState extends State<ShopManagementScreen> {
       final auth = context.read<AuthProvider>();
       if (auth.userId != null) {
         context.read<CartProvider>().fetchUserProducts(auth.userId!);
+        context.read<CartProvider>().fetchSales(auth.userId!);
       }
     });
   }
@@ -224,119 +225,176 @@ class _ShopManagementScreenState extends State<ShopManagementScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (cart.userProducts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.store_mall_directory,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(AppLocalizations.of(context).noSeedsPosted),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () => _showAddProductDialog(context),
-                    child: Text(AppLocalizations.of(context).postFirstSeed),
-                  ),
-                ],
-              ),
-            );
-          }
+          final earnings = cart.totalEarnings;
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: cart.userProducts.length,
-            itemBuilder: (context, index) {
-              final product = cart.userProducts[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  leading: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: product.imageUrl.startsWith('assets/')
-                          ? Image.asset(product.imageUrl, fit: BoxFit.cover)
-                          : Image.network(
-                              product.imageUrl.startsWith('http')
-                                  ? product.imageUrl
-                                  : '${cart.apiUrl}/${product.imageUrl}',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.broken_image),
-                            ),
-                    ),
-                  ),
-                  title: Text(product.name),
-                  subtitle: Text(
-                    '\$${product.price.toStringAsFixed(2)} • Stock: ${product.stock}',
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text(
-                            AppLocalizations.of(context).deleteProduct,
-                          ),
-                          content: Text(
-                            AppLocalizations.of(context).deleteConfirm,
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: Text(AppLocalizations.of(context).cancel),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: Text(
-                                AppLocalizations.of(context).delete,
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            ),
-                          ],
+          return Column(
+            children: [
+              Card(
+                margin: const EdgeInsets.all(16),
+                color: Colors.green.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context).totalEarnings,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-
-                      if (confirm == true && context.mounted) {
-                        final success = await cart.deleteProduct(product.id);
-                        if (success && context.mounted) {
-                          // Refresh user products
-                          if (auth.userId != null) {
-                            cart.fetchUserProducts(auth.userId!);
-                          }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(context).productDeleted,
-                              ),
-                            ),
-                          );
-                        } else if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(context).deleteFailed,
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    },
+                      ),
+                      Text(
+                        '\$${earnings.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            },
+              ),
+              Expanded(
+                child: cart.userProducts.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.store_mall_directory,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(AppLocalizations.of(context).noSeedsPosted),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: cart.userProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = cart.userProducts[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: ListTile(
+                              leading: Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: product.imageUrl.startsWith('assets/')
+                                      ? Image.asset(
+                                          product.imageUrl,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.network(
+                                          product.imageUrl.startsWith('http')
+                                              ? product.imageUrl
+                                              : '${cart.apiUrl}/${product.imageUrl}',
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  const Icon(
+                                                    Icons.broken_image,
+                                                  ),
+                                        ),
+                                ),
+                              ),
+                              title: Text(product.name),
+                              subtitle: Text(
+                                '\$${product.price.toStringAsFixed(2)} • Stock: ${product.stock}',
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        ).deleteProduct,
+                                      ),
+                                      content: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        ).deleteConfirm,
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: Text(
+                                            AppLocalizations.of(context).cancel,
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: Text(
+                                            AppLocalizations.of(context).delete,
+                                            style: const TextStyle(
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true && context.mounted) {
+                                    final success = await cart.deleteProduct(
+                                      product.id,
+                                    );
+                                    if (success && context.mounted) {
+                                      // Refresh user products
+                                      if (auth.userId != null) {
+                                        cart.fetchUserProducts(auth.userId!);
+                                      }
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            ).productDeleted,
+                                          ),
+                                        ),
+                                      );
+                                    } else if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            ).deleteFailed,
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),

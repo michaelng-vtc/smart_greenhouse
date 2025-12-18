@@ -37,12 +37,24 @@ class Orders {
             // Insert order items
             $itemStmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (:order_id, :product_id, :quantity, :price)");
             
+            // Update product stock
+            $updateStockStmt = $conn->prepare("UPDATE products SET stock = stock - :quantity WHERE id = :product_id AND stock >= :quantity");
+
             foreach ($items as $item) {
                 $itemStmt->bindParam(':order_id', $orderId);
                 $itemStmt->bindParam(':product_id', $item['product_id']);
                 $itemStmt->bindParam(':quantity', $item['quantity']);
                 $itemStmt->bindParam(':price', $item['price']);
                 $itemStmt->execute();
+
+                // Update stock
+                $updateStockStmt->bindParam(':quantity', $item['quantity']);
+                $updateStockStmt->bindParam(':product_id', $item['product_id']);
+                $updateStockStmt->execute();
+
+                if ($updateStockStmt->rowCount() == 0) {
+                    throw new \Exception("Insufficient stock for product ID " . $item['product_id']);
+                }
             }
 
             $conn->commit();
@@ -122,6 +134,40 @@ class Orders {
             return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
         } catch (\Exception $e) {
             $response->getBody()->write(json_encode(['error' => 'Failed to fetch orders: ' . $e->getMessage()]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+    }
+
+    // Get user's sales (items sold by this user)
+    public function getSales(Request $request, Response $response, array $args) {
+        $userId = $args['user_id'] ?? null;
+
+        if (!$userId) {
+            $response->getBody()->write(json_encode(['error' => 'User ID is required']));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        }
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        try {
+            $stmt = $conn->prepare("
+                SELECT oi.product_id, oi.quantity, oi.price, oi.order_id, o.created_at, p.name as product_name
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                JOIN orders o ON oi.order_id = o.id
+                WHERE p.user_id = :user_id
+                ORDER BY o.created_at DESC
+            ");
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->execute();
+
+            $sales = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $response->getBody()->write(json_encode($sales));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+        } catch (\Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Failed to fetch sales: ' . $e->getMessage()]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
     }

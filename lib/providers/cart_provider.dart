@@ -5,16 +5,19 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../models/product.dart';
 import '../models/order.dart';
+import '../models/sale.dart';
 
 class CartProvider with ChangeNotifier {
   String _apiUrl = '';
   List<Product> _products = [];
   List<Product> _userProducts = [];
   List<Order> _orders = [];
+  List<Sale> _sales = [];
   final Map<int, CartItem> _items = {};
   bool _isLoading = false;
 
   List<Order> get orders => _orders;
+  List<Sale> get sales => _sales;
 
   String get apiUrl => _apiUrl;
 
@@ -38,6 +41,14 @@ class CartProvider with ChangeNotifier {
     _items.forEach((key, cartItem) {
       total += cartItem.total;
     });
+    return total;
+  }
+
+  double get totalEarnings {
+    var total = 0.0;
+    for (var sale in _sales) {
+      total += sale.total;
+    }
     return total;
   }
 
@@ -213,6 +224,9 @@ class CartProvider with ChangeNotifier {
 
   void addItem(Product product) {
     if (_items.containsKey(product.id)) {
+      if (_items[product.id]!.quantity >= product.stock) {
+        return;
+      }
       _items.update(
         product.id,
         (existingCartItem) => CartItem(
@@ -221,7 +235,9 @@ class CartProvider with ChangeNotifier {
         ),
       );
     } else {
-      _items.putIfAbsent(product.id, () => CartItem(product: product));
+      if (product.stock > 0) {
+        _items.putIfAbsent(product.id, () => CartItem(product: product));
+      }
     }
     notifyListeners();
   }
@@ -282,6 +298,34 @@ class CartProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchSales(int userId) async {
+    if (_apiUrl.isEmpty) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/orders/sales/$userId'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _sales = data.map((item) => Sale.fromJson(item)).toList();
+      } else {
+        if (kDebugMode) {
+          print('Failed to fetch sales: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching sales: $e');
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> submitOrder(int userId) async {
     if (_apiUrl.isEmpty || _items.isEmpty) return false;
 
@@ -308,6 +352,7 @@ class CartProvider with ChangeNotifier {
 
       if (response.statusCode == 201) {
         clear();
+        await fetchProducts(); // Refresh products to update stock
         return true;
       } else {
         if (kDebugMode) {

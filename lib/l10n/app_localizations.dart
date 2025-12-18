@@ -104,6 +104,7 @@ class AppLocalizations {
       'pendingRequests': 'Pending Requests',
       'friendRequestSent': 'Friend request sent to',
       'failedSendMessage': 'Failed to send message',
+      'totalEarnings': 'Total Earnings',
     },
     'zh': {
       'settings': '设置',
@@ -193,6 +194,7 @@ class AppLocalizations {
       'pendingRequests': '待处理请求',
       'friendRequestSent': '好友请求已发送至',
       'failedSendMessage': '发送消息失败',
+      'totalEarnings': '总收入',
     },
   };
 
@@ -331,6 +333,8 @@ class AppLocalizations {
       _localizedValues[locale.languageCode]!['friendRequestSent']!;
   String get failedSendMessage =>
       _localizedValues[locale.languageCode]!['failedSendMessage']!;
+  String get totalEarnings =>
+      _localizedValues[locale.languageCode]!['totalEarnings']!;
 }
 
 class _AppLocalizationsDelegate

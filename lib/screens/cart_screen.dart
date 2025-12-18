@@ -62,8 +62,14 @@ class CartScreen extends StatelessWidget {
                               Text('${cartItem.quantity}'),
                               IconButton(
                                 icon: const Icon(Icons.add_circle_outline),
-                                onPressed: () => cart.addItem(cartItem.product),
-                                color: Colors.green,
+                                onPressed:
+                                    cartItem.quantity < cartItem.product.stock
+                                    ? () => cart.addItem(cartItem.product)
+                                    : null,
+                                color:
+                                    cartItem.quantity < cartItem.product.stock
+                                    ? Colors.green
+                                    : Colors.grey,
                               ),
                             ],
                           ),
