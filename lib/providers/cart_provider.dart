@@ -1,17 +1,22 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import '../models/product.dart';
 import '../models/order.dart';
 
 class CartProvider with ChangeNotifier {
   String _apiUrl = '';
   List<Product> _products = [];
+  List<Product> _userProducts = [];
   List<Order> _orders = [];
   final Map<int, CartItem> _items = {};
   bool _isLoading = false;
 
   List<Order> get orders => _orders;
+
+  String get apiUrl => _apiUrl;
 
   void updateApiUrl(String url) {
     _apiUrl = url;
@@ -22,6 +27,7 @@ class CartProvider with ChangeNotifier {
   }
 
   List<Product> get products => _products;
+  List<Product> get userProducts => _userProducts;
   Map<int, CartItem> get items => _items;
   bool get isLoading => _isLoading;
 
@@ -58,6 +64,150 @@ class CartProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<String?> uploadImage(dynamic imageFile, {int? userId}) async {
+    if (_apiUrl.isEmpty) return null;
+    try {
+      // _apiUrl is like http://ip/api/public
+      // upload endpoint is http://ip/api/public/v1/upload
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_apiUrl/v1/upload'),
+      );
+
+      if (userId != null) {
+        request.fields['user_id'] = userId.toString();
+      }
+
+      if (kIsWeb) {
+        // For web, imageFile should be XFile
+        if (imageFile is! XFile) return null;
+        final bytes = await imageFile.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            bytes,
+            filename: imageFile.name,
+          ),
+        );
+      } else {
+        // For mobile, imageFile can be File or XFile
+        String path;
+        if (imageFile is File) {
+          path = imageFile.path;
+        } else if (imageFile is XFile) {
+          path = imageFile.path;
+        } else {
+          return null;
+        }
+        request.files.add(await http.MultipartFile.fromPath('image', path));
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['url'];
+      } else {
+        if (kDebugMode) {
+          print('Upload failed with status: ${response.statusCode}');
+          print('Response body: ${response.body}');
+        }
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) print('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  Future<bool> addProduct(
+    String name,
+    String description,
+    double price,
+    int stock, {
+    String? imageUrl,
+    int? userId,
+  }) async {
+    if (_apiUrl.isEmpty) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_apiUrl/v1/products'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'description': description,
+          'price': price,
+          'stock': stock,
+          'image_url': imageUrl ?? 'assets/images/default_seed.png',
+          'user_id': userId,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        await fetchProducts(); // Refresh list
+        if (userId != null) {
+          await fetchUserProducts(userId);
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error adding product: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<void> fetchUserProducts(int userId) async {
+    if (_apiUrl.isEmpty) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/products?user_id=$userId'),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        _userProducts = data.map((item) => Product.fromJson(item)).toList();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching user products: $e');
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deleteProduct(int productId) async {
+    if (_apiUrl.isEmpty) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$_apiUrl/v1/products/$productId'),
+      );
+
+      if (response.statusCode == 200) {
+        await fetchProducts(); // Refresh main list
+        // Note: We can't easily refresh user list here without userId,
+        // so the UI should handle calling fetchUserProducts again or we rely on local removal
+        return true;
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting product: $e');
+      }
+      return false;
     }
   }
 

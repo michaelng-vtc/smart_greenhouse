@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/chat_provider.dart';
+import '../providers/friend_provider.dart';
+import 'package:smart_greenhouse/l10n/app_localizations.dart';
 import 'chat_screen.dart';
 import 'friend_list_screen.dart';
 
@@ -19,7 +20,7 @@ class _UserListScreenState extends State<UserListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthProvider>();
       if (auth.isAuthenticated && auth.userId != null) {
-        context.read<ChatProvider>().fetchUsers(auth.userId!);
+        context.read<FriendProvider>().fetchFriends(auth.userId!);
       }
     });
   }
@@ -27,15 +28,15 @@ class _UserListScreenState extends State<UserListScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final chat = context.watch<ChatProvider>();
+    final friendProvider = context.watch<FriendProvider>();
 
     if (!auth.isAuthenticated) {
-      return const Center(child: Text('Please login to chat'));
+      return Center(child: Text(AppLocalizations.of(context).pleaseLoginChat));
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chats'),
+        title: Text(AppLocalizations.of(context).chats),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
@@ -52,14 +53,14 @@ class _UserListScreenState extends State<UserListScreen> {
           ),
         ],
       ),
-      body: chat.isLoading
+      body: friendProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : chat.users.isEmpty
-          ? const Center(child: Text('No other users found'))
+          : friendProvider.friends.isEmpty
+          ? Center(child: Text(AppLocalizations.of(context).noFriendsFound))
           : ListView.builder(
-              itemCount: chat.users.length,
+              itemCount: friendProvider.friends.length,
               itemBuilder: (context, index) {
-                final user = chat.users[index];
+                final user = friendProvider.friends[index];
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: Colors.green.shade100,

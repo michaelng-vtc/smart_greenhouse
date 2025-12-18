@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/greenhouse_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/cart_provider.dart';
@@ -67,6 +68,7 @@ class MainApp extends StatelessWidget {
             theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
             locale: settings.locale,
             localizationsDelegates: const [
+              AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
@@ -75,6 +77,32 @@ class MainApp extends StatelessWidget {
               Locale('en'), // English
               Locale('zh'), // Chinese
             ],
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  if (child != null) child,
+                  Positioned(
+                    bottom: 20,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Text(
+                          "ChanWingLok 240279234 \nNgChingWai 240437702",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
             home: const LoginScreen(),
           );
         },

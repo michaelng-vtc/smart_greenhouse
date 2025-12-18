@@ -21,13 +21,13 @@ class ChatProvider with ChangeNotifier {
     _apiUrl = url;
   }
 
-  void startPolling(int otherUserId) {
+  void startPolling(int currentUserId, int otherUserId) {
     _currentChatPartnerId = otherUserId;
-    fetchMessages(otherUserId);
+    fetchMessages(currentUserId, otherUserId);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (_currentChatPartnerId == otherUserId) {
-        fetchMessages(otherUserId);
+        fetchMessages(currentUserId, otherUserId);
       }
     });
   }
@@ -68,12 +68,14 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchMessages(int otherUserId) async {
+  Future<void> fetchMessages(int currentUserId, int otherUserId) async {
     if (_apiUrl.isEmpty) return;
 
     try {
       final response = await http.get(
-        Uri.parse('$_apiUrl/v1/chat/messages/$otherUserId'),
+        Uri.parse(
+          '$_apiUrl/v1/chat/messages/$otherUserId?user_id=$currentUserId',
+        ),
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -112,7 +114,7 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 201) {
-        await fetchMessages(receiverId); // Refresh immediately
+        await fetchMessages(senderId, receiverId); // Refresh immediately
         return true;
       }
       return false;

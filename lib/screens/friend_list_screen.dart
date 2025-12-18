@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'package:smart_greenhouse/l10n/app_localizations.dart';
 import '../providers/friend_provider.dart';
 
 class FriendListScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
       if (auth.userId != null) {
         context.read<FriendProvider>().fetchFriends(auth.userId!);
         context.read<FriendProvider>().fetchPendingRequests(auth.userId!);
+        context.read<FriendProvider>().fetchSentRequests(auth.userId!);
       }
     });
   }
@@ -37,7 +39,12 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error ?? 'Friend request sent to $username')),
+        SnackBar(
+          content: Text(
+            error ??
+                '${AppLocalizations.of(context).friendRequestSent} $username',
+          ),
+        ),
       );
       if (error == null) _searchController.clear();
     }
@@ -50,7 +57,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Friends'),
+        title: Text(AppLocalizations.of(context).friends),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
@@ -63,10 +70,14 @@ class _FriendListScreenState extends State<FriendListScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add friend by username',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(
+                        context,
+                      ).addFriendByUsername,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -77,19 +88,22 @@ class _FriendListScreenState extends State<FriendListScreen> {
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Add'),
+                  child: Text(AppLocalizations.of(context).add),
                 ),
               ],
             ),
           ),
           if (friendProvider.pendingRequests.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8,
+              ),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Pending Requests',
-                  style: TextStyle(
+                  AppLocalizations.of(context).pendingRequests,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     color: Colors.green,
@@ -109,7 +123,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
                     onPressed: () {
                       friendProvider.acceptRequest(
                         auth.userId!,
-                        req['request_id'],
+                        int.parse(req['request_id'].toString()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -117,6 +131,41 @@ class _FriendListScreenState extends State<FriendListScreen> {
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Accept'),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+          ],
+          if (friendProvider.sentRequests.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Sent Requests',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: friendProvider.sentRequests.length,
+              itemBuilder: (context, index) {
+                final req = friendProvider.sentRequests[index];
+                return ListTile(
+                  title: Text(req['username']),
+                  trailing: const Text(
+                    'Pending',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 );
               },
@@ -157,6 +206,42 @@ class _FriendListScreenState extends State<FriendListScreen> {
                           ),
                         ),
                         title: Text(friend.username),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Friend'),
+                                content: Text(
+                                  'Are you sure you want to delete ${friend.username}? This will also delete your chat history.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirm == true && context.mounted) {
+                              await friendProvider.deleteFriend(
+                                auth.userId!,
+                                friend.id,
+                              );
+                            }
+                          },
+                        ),
                       );
                     },
                   ),

@@ -74,6 +74,20 @@ class Friends
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getSentRequests($userId)
+    {
+        // Requests sent BY me
+        $sql = "
+            SELECT u.id, u.username, f.id as request_id
+            FROM users u
+            JOIN friends f ON u.id = f.friend_id
+            WHERE f.user_id = :uid AND f.status = 'pending'
+        ";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':uid' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function acceptRequest($userId, $requestId)
     {
         // Verify the request is for this user
@@ -86,5 +100,26 @@ class Friends
             }
         }
         return ['error' => 'Failed to accept request'];
+    }
+
+    public function deleteFriend($userId, $friendId)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Delete friendship (check both directions)
+            $stmt = $this->db->prepare("DELETE FROM friends WHERE (user_id = :uid AND friend_id = :fid) OR (user_id = :fid AND friend_id = :uid)");
+            $stmt->execute([':uid' => $userId, ':fid' => $friendId]);
+
+            // Delete chat history
+            $stmt = $this->db->prepare("DELETE FROM chat_messages WHERE (sender_id = :uid AND receiver_id = :fid) OR (sender_id = :fid AND receiver_id = :uid)");
+            $stmt->execute([':uid' => $userId, ':fid' => $friendId]);
+
+            $this->db->commit();
+            return ['message' => 'Friend and chat history deleted'];
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            return ['error' => 'Failed to delete friend: ' . $e->getMessage()];
+        }
     }
 }

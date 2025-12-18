@@ -52,6 +52,7 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
     $group->post('/auth/resend', 'App\Services\Auth\ResendCode');
     $group->post('/auth/change-password', 'App\Services\Auth\ChangePassword');
     $group->post('/auth/change-username', 'App\Services\Auth\ChangeUsername');
+    $group->get('/auth/check-username', 'App\Services\Auth\CheckUsername');
 
     // 1. Sensor Data
     $group->post('/sensors', 'App\Services\Greenhouse\SensorData');
@@ -61,29 +62,19 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
 
     // 2. System Data
     $group->get('/fan/history', 'App\Services\Greenhouse\FanData');
-    $group->get('/fan/status', function ($request, $response) {
-        return (new \App\Services\Greenhouse\GetSystemStatus())->getFan($request, $response);
-    });
+    $group->get('/fan/status', 'App\Services\Greenhouse\GetSystemStatus:getFan');
     $group->post('/fan/log', 'App\Services\Greenhouse\FanLog');
     
-    $group->get('/curtain/status', function ($request, $response) {
-        return (new \App\Services\Greenhouse\GetSystemStatus())->getCurtain($request, $response);
-    });
+    $group->get('/curtain/status', 'App\Services\Greenhouse\GetSystemStatus:getCurtain');
     $group->post('/curtain/log', 'App\Services\Greenhouse\CurtainLog');
     
-    $group->get('/irrigation/status', function ($request, $response) {
-        return (new \App\Services\Greenhouse\GetSystemStatus())->getIrrigation($request, $response);
-    });
+    $group->get('/irrigation/status', 'App\Services\Greenhouse\GetSystemStatus:getIrrigation');
     $group->post('/irrigation/log', 'App\Services\Greenhouse\IrrigationLog');
     
-    $group->get('/heater/status', function ($request, $response) {
-        return (new \App\Services\Greenhouse\GetSystemStatus())->getHeater($request, $response);
-    });
+    $group->get('/heater/status', 'App\Services\Greenhouse\GetSystemStatus:getHeater');
     $group->post('/heater/log', 'App\Services\Greenhouse\HeaterLog');
     
-    $group->get('/mister/status', function ($request, $response) {
-        return (new \App\Services\Greenhouse\GetSystemStatus())->getMister($request, $response);
-    });
+    $group->get('/mister/status', 'App\Services\Greenhouse\GetSystemStatus:getMister');
     $group->post('/mister/log', 'App\Services\Greenhouse\MisterLog');
 
     // // 3. Profiles
@@ -98,6 +89,8 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
 
     // 5. Shop
     $group->get('/products', 'App\Services\Shop\Products:getAll');
+    $group->post('/products', 'App\Services\Shop\Products:create');
+    $group->delete('/products/{id}', 'App\Services\Shop\Products:delete');
     $group->post('/orders', 'App\Services\Shop\Orders:create');
     $group->get('/orders/user/{user_id}', 'App\Services\Shop\Orders:getUserOrders');
 
@@ -113,39 +106,15 @@ $app->group('/v1', function (Slim\Routing\RouteCollectorProxy $group) {
     $group->post('/chat/messages', 'App\Services\Chat\Chat:sendMessage');
 
     // 8. Friends
-    $group->post('/friends/request', function ($request, $response) {
-        $data = $request->getParsedBody();
-        $db = (new \App\Config\Database())->connect();
-        $service = new \App\Services\Friends\Friends($db);
-        $result = $service->addFriend($data['user_id'], $data['friend_username']);
-        $response->getBody()->write(json_encode($result));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(isset($result['error']) ? 400 : 200);
-    });
+    $group->post('/friends/request', 'App\Services\Friends\FriendController:request');
+    $group->get('/friends/{user_id}', 'App\Services\Friends\FriendController:getAll');
+    $group->get('/friends/requests/{user_id}', 'App\Services\Friends\FriendController:getPending');
+    $group->get('/friends/sent/{user_id}', 'App\Services\Friends\FriendController:getSent');
+    $group->post('/friends/accept', 'App\Services\Friends\FriendController:accept');
+    $group->post('/friends/delete', 'App\Services\Friends\FriendController:delete');
 
-    $group->get('/friends/{user_id}', function ($request, $response, $args) {
-        $db = (new \App\Config\Database())->connect();
-        $service = new \App\Services\Friends\Friends($db);
-        $result = $service->getFriends($args['user_id']);
-        $response->getBody()->write(json_encode($result));
-        return $response->withHeader('Content-Type', 'application/json');
-    });
-
-    $group->get('/friends/requests/{user_id}', function ($request, $response, $args) {
-        $db = (new \App\Config\Database())->connect();
-        $service = new \App\Services\Friends\Friends($db);
-        $result = $service->getPendingRequests($args['user_id']);
-        $response->getBody()->write(json_encode($result));
-        return $response->withHeader('Content-Type', 'application/json');
-    });
-
-    $group->post('/friends/accept', function ($request, $response) {
-        $data = $request->getParsedBody();
-        $db = (new \App\Config\Database())->connect();
-        $service = new \App\Services\Friends\Friends($db);
-        $result = $service->acceptRequest($data['user_id'], $data['request_id']);
-        $response->getBody()->write(json_encode($result));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(isset($result['error']) ? 400 : 200);
-    });
+    // 9. Common
+    $group->post('/upload', 'App\Services\Common\Upload');
 });
 
 // Run app

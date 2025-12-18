@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/greenhouse_provider.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/app_localizations.dart';
 import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -40,12 +41,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final newPasswordController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool isLoading = false;
+    final l10n = AppLocalizations.of(context);
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Change Password'),
+          title: Text(l10n.changePassword),
           content: Form(
             key: formKey,
             child: Column(
@@ -53,16 +55,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 TextFormField(
                   controller: oldPasswordController,
-                  decoration: const InputDecoration(labelText: 'Old Password'),
+                  decoration: InputDecoration(labelText: l10n.oldPassword),
                   obscureText: true,
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                  validator: (value) => value!.isEmpty ? l10n.required : null,
                 ),
                 TextFormField(
                   controller: newPasswordController,
-                  decoration: const InputDecoration(labelText: 'New Password'),
+                  decoration: InputDecoration(labelText: l10n.newPassword),
                   obscureText: true,
                   validator: (value) =>
-                      value!.length < 6 ? 'Min 6 chars' : null,
+                      value!.length < 6 ? l10n.min6Chars : null,
                 ),
               ],
             ),
@@ -70,7 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: isLoading
@@ -91,8 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (success) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Password changed successfully'),
+                            SnackBar(
+                              content: Text(l10n.passwordChanged),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -101,7 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             SnackBar(
                               content: Text(
                                 context.read<AuthProvider>().errorMessage ??
-                                    'Failed',
+                                    l10n.failed,
                               ),
                               backgroundColor: Colors.red,
                             ),
@@ -127,24 +129,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final newUsernameController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool isLoading = false;
+    final l10n = AppLocalizations.of(context);
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Change Username'),
+          title: Text(l10n.changeUsername),
           content: Form(
             key: formKey,
             child: TextFormField(
               controller: newUsernameController,
-              decoration: const InputDecoration(labelText: 'New Username'),
-              validator: (value) => value!.isEmpty ? 'Required' : null,
+              decoration: InputDecoration(labelText: l10n.newUsername),
+              validator: (value) => value!.isEmpty ? l10n.required : null,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: isLoading
@@ -162,8 +165,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (success) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Username changed successfully'),
+                            SnackBar(
+                              content: Text(l10n.usernameChanged),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -172,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             SnackBar(
                               content: Text(
                                 context.read<AuthProvider>().errorMessage ??
-                                    'Failed',
+                                    l10n.failed,
                               ),
                               backgroundColor: Colors.red,
                             ),
@@ -197,10 +200,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final apiUrl = context.read<GreenhouseProvider>().apiUrl;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settings),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -210,13 +214,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _buildSectionHeader('User Profile'),
+              _buildSectionHeader(l10n.userProfile),
               Card(
                 child: Column(
                   children: [
                     ListTile(
                       leading: const Icon(Icons.person),
-                      title: const Text('Change Username'),
+                      title: Text(l10n.changeUsername),
                       subtitle: Text(
                         context.watch<AuthProvider>().username ?? '',
                       ),
@@ -226,7 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.lock),
-                      title: const Text('Change Password'),
+                      title: Text(l10n.changePassword),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: _showChangePasswordDialog,
                     ),
@@ -234,16 +238,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              _buildSectionHeader('Plant Profile'),
+              _buildSectionHeader(l10n.plantProfile),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Active Profile',
-                        style: TextStyle(
+                      Text(
+                        l10n.activeProfile,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
@@ -264,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 )
                                 ? settings.activeProfileName
                                 : null,
-                            hint: const Text('Select Profile'),
+                            hint: Text(l10n.selectProfile),
                             items: settings.availableProfiles.map((
                               String value,
                             ) {
@@ -282,9 +286,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Current Setpoints:',
-                        style: TextStyle(
+                      Text(
+                        l10n.currentSetpoints,
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Colors.grey,
@@ -292,23 +296,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 8),
                       _buildSetpointRow(
-                        'Temp Range',
+                        l10n.tempRange,
                         '${settings.currentSetpoints.tempMinC}°C - ${settings.currentSetpoints.tempMaxC}°C',
                       ),
                       _buildSetpointRow(
-                        'VPD Target',
+                        l10n.vpdTarget,
                         '${settings.currentSetpoints.vpdTargetLow} - ${settings.currentSetpoints.vpdTargetHigh} kPa',
                       ),
                       _buildSetpointRow(
-                        'CO2 Limit',
+                        l10n.co2Limit,
                         '${settings.currentSetpoints.co2HighPpm} ppm',
                       ),
                       _buildSetpointRow(
-                        'Light Max',
+                        l10n.lightMax,
                         '${settings.currentSetpoints.lightMaxLux} lx',
                       ),
                       _buildSetpointRow(
-                        'Soil Min',
+                        l10n.soilMin,
                         '${settings.currentSetpoints.soilMinPercent}%',
                       ),
                     ],
@@ -316,22 +320,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              _buildSectionHeader('Language'),
+              _buildSectionHeader(l10n.language),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.language),
-                  title: const Text('App Language'),
+                  title: Text(l10n.appLanguage),
                   trailing: DropdownButton<Locale>(
                     value: settings.locale,
                     underline: const SizedBox(),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
-                        value: Locale('en'),
-                        child: Text('English'),
+                        value: const Locale('en'),
+                        child: Text(l10n.english),
                       ),
                       DropdownMenuItem(
-                        value: Locale('zh'),
-                        child: Text('Chinese'),
+                        value: const Locale('zh'),
+                        child: Text(l10n.chinese),
                       ),
                     ],
                     onChanged: (Locale? newLocale) {
@@ -343,14 +347,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              _buildSectionHeader('Soil Sensor Calibration'),
-              const Text(
-                'Calibrate the soil moisture sensor by setting the raw ADC values for dry (air) and wet (water) conditions.',
-                style: TextStyle(color: Colors.grey),
+              _buildSectionHeader(l10n.soilSensorCalibration),
+              Text(
+                l10n.calibrationDesc,
+                style: const TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 16),
               _buildCalibrationCard(
-                'Dry ADC Value (Air)',
+                l10n.dryValue,
                 '',
                 settings.dryAdc,
                 (val) => settings.setSoilCalibration(val, settings.wetAdc),
@@ -360,7 +364,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 divisions: 4095,
               ),
               _buildCalibrationCard(
-                'Wet ADC Value (Water)',
+                l10n.wetValue,
                 '',
                 settings.wetAdc,
                 (val) => settings.setSoilCalibration(settings.dryAdc, val),
@@ -375,7 +379,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _logout,
                   icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
+                  label: Text(l10n.logout),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade50,
                     foregroundColor: Colors.red,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_greenhouse/l10n/app_localizations.dart';
 import 'dashboard_screen.dart';
 import 'settings_screen.dart';
 import 'shop_screen.dart';
@@ -33,19 +34,22 @@ class _MainScreenState extends State<MainScreen> {
       body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed, // Added to support >3 items
-        items: const <BottomNavigationBarItem>[
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: const Icon(Icons.dashboard),
+            label: AppLocalizations.of(context).dashboard,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_bag),
-            label: 'Shop',
+            icon: const Icon(Icons.shopping_bag),
+            label: AppLocalizations.of(context).shop,
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.article), label: 'News'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.article),
+            label: AppLocalizations.of(context).news,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.settings),
+            label: AppLocalizations.of(context).settings,
           ),
         ],
         currentIndex: _selectedIndex,

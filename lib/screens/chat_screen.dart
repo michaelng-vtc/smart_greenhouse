@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:smart_greenhouse/l10n/app_localizations.dart';
 import '../providers/chat_provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -26,7 +27,13 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().startPolling(widget.otherUserId);
+      final auth = context.read<AuthProvider>();
+      if (auth.userId != null) {
+        context.read<ChatProvider>().startPolling(
+          auth.userId!,
+          widget.otherUserId,
+        );
+      }
     });
   }
 
@@ -46,9 +53,9 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _sendMessage() async {
     final auth = context.read<AuthProvider>();
     if (auth.userId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please login to chat')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).pleaseLoginChat)),
+      );
       return;
     }
 
@@ -63,9 +70,9 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     if (!success && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to send message')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).failedSendMessage)),
+      );
     } else {
       // Scroll to bottom
       if (_scrollController.hasClients) {

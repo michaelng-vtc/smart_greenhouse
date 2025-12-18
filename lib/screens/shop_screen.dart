@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/auth_provider.dart';
+import 'package:smart_greenhouse/l10n/app_localizations.dart';
 import 'cart_screen.dart';
 import 'orders_screen.dart';
+import 'shop_management_screen.dart';
 
 class ShopScreen extends StatelessWidget {
   const ShopScreen({super.key});
@@ -11,13 +14,24 @@ class ShopScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Seed Shop'),
+        title: Text(AppLocalizations.of(context).seedShop),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.storefront),
+            tooltip: AppLocalizations.of(context).myShop,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ShopManagementScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.receipt_long),
-            tooltip: 'My Orders',
+            tooltip: AppLocalizations.of(context).myOrders,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const OrdersScreen()),
@@ -37,7 +51,9 @@ class ShopScreen extends StatelessWidget {
                 },
                 backgroundColor: Colors.green,
                 icon: const Icon(Icons.shopping_cart),
-                label: Text('View Cart (${cart.itemCount})'),
+                label: Text(
+                  '${AppLocalizations.of(context).viewCart} (${cart.itemCount})',
+                ),
               )
             : const SizedBox.shrink(),
       ),
@@ -47,16 +63,22 @@ class ShopScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (cart.products.isEmpty) {
+          final auth = context.read<AuthProvider>();
+          final displayProducts = cart.products.where((p) {
+            if (auth.userId == null) return true;
+            return p.userId != auth.userId;
+          }).toList();
+
+          if (displayProducts.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('No products found.'),
+                  Text(AppLocalizations.of(context).noProductsFound),
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () => cart.fetchProducts(),
-                    child: const Text('Retry'),
+                    child: Text(AppLocalizations.of(context).retry),
                   ),
                 ],
               ),
@@ -71,9 +93,9 @@ class ShopScreen extends StatelessWidget {
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
-            itemCount: cart.products.length,
+            itemCount: displayProducts.length,
             itemBuilder: (context, index) {
-              final product = cart.products[index];
+              final product = displayProducts[index];
               return Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(
@@ -84,18 +106,87 @@ class ShopScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Container(
+                        width: double.infinity,
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(12),
                           ),
                         ),
-                        child: Center(
-                          child: Icon(
-                            Icons.eco,
-                            size: 64,
-                            color: Colors.green[300],
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
                           ),
+                          child: product.imageUrl.startsWith('assets/')
+                              ? Image.asset(
+                                  product.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, error, stackTrace) {
+                                    return Center(
+                                      child: Icon(
+                                        Icons.eco,
+                                        size: 64,
+                                        color: Colors.green[300],
+                                      ),
+                                    );
+                                  },
+                                )
+                              : product.imageUrl.isNotEmpty
+                              ? Image.network(
+                                  product.imageUrl.startsWith('http')
+                                      ? product.imageUrl
+                                      : '${cart.apiUrl}/${product.imageUrl}',
+                                  fit: BoxFit.cover,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        }
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (ctx, error, stackTrace) {
+                                    return Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image,
+                                            size: 48,
+                                            color: Colors.grey[400],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Failed to load',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Center(
+                                  child: Icon(
+                                    Icons.eco,
+                                    size: 64,
+                                    color: Colors.green[300],
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -153,7 +244,7 @@ class ShopScreen extends StatelessWidget {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                          'Added ${product.name} to cart',
+                                          '${AppLocalizations.of(context).addedToCart}: ${product.name}',
                                         ),
                                         duration: const Duration(seconds: 1),
                                       ),

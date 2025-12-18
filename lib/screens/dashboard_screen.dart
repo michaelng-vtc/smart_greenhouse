@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/greenhouse_provider.dart';
 import '../widgets/analog_gauge.dart';
 import '../widgets/api_sensor_chart.dart';
+import 'package:smart_greenhouse/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -29,9 +30,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F7FA),
         appBar: AppBar(
-          title: const Text(
-            'Smart Greenhouse',
-            style: TextStyle(
+          title: Text(
+            AppLocalizations.of(context).smartGreenhouse,
+            style: const TextStyle(
               color: Colors.black87,
               fontWeight: FontWeight.bold,
             ),
@@ -83,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 Text(
-                  'Last Updated: ${DateFormat('HH:mm:ss').format(data.timestamp)}',
+                  '${AppLocalizations.of(context).lastUpdated}: ${DateFormat('HH:mm:ss').format(data.timestamp)}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 const SizedBox(height: 16),
@@ -97,7 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   childAspectRatio: 0.7,
                   children: [
                     AnalogGauge(
-                      title: 'Temp',
+                      title: AppLocalizations.of(context).temp,
                       value: data.temperature,
                       min: 0,
                       max: 50,
@@ -106,7 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.thermostat,
                     ),
                     AnalogGauge(
-                      title: 'VPD',
+                      title: AppLocalizations.of(context).vpd,
                       value: data.vpd,
                       min: 0,
                       max: 3.0,
@@ -119,7 +120,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       isSecondarySystemActive: provider.systemStatus.isMisterOn,
                     ),
                     AnalogGauge(
-                      title: 'Humidity',
+                      title: AppLocalizations.of(context).humidity,
                       value: data.humidity,
                       min: 0,
                       max: 100,
@@ -128,7 +129,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: Icons.water_drop,
                     ),
                     AnalogGauge(
-                      title: 'Light',
+                      title: AppLocalizations.of(context).light,
                       value: data.lightLevel,
                       min: 0,
                       max: 5000,
@@ -139,7 +140,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       isSystemActive: provider.systemStatus.isCurtainOn,
                     ),
                     AnalogGauge(
-                      title: 'CO2',
+                      title: AppLocalizations.of(context).co2,
                       value: data.co2,
                       min: 0,
                       max: 2000,
@@ -150,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       isSystemActive: provider.systemStatus.isFanOn,
                     ),
                     AnalogGauge(
-                      title: 'Soil',
+                      title: AppLocalizations.of(context).soil,
                       value: data.soilMoisture,
                       min: 0,
                       max: 100,
@@ -164,9 +165,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
 
                 const SizedBox(height: 24),
-                const Text(
-                  'History Trends',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context).historyTrends,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -181,12 +185,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         unselectedLabelColor: Colors.grey,
                         indicatorColor: Colors.green,
                         isScrollable: true,
-                        tabs: const [
-                          Tab(text: 'Temp'),
-                          Tab(text: 'Humidity'),
-                          Tab(text: 'CO2'),
-                          Tab(text: 'Light'),
-                          Tab(text: 'Soil'),
+                        tabs: [
+                          Tab(text: AppLocalizations.of(context).temp),
+                          Tab(text: AppLocalizations.of(context).humidity),
+                          Tab(text: AppLocalizations.of(context).co2),
+                          Tab(text: AppLocalizations.of(context).light),
+                          Tab(text: AppLocalizations.of(context).soil),
                         ],
                       ),
                       SizedBox(

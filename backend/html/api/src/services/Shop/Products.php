@@ -9,7 +9,13 @@ use PDO;
 
 class Products {
     public function getAll(Request $request, Response $response) {
+        $queryParams = $request->getQueryParams();
+        $userId = $queryParams['user_id'] ?? null;
+
         $sql = "SELECT * FROM products";
+        if ($userId) {
+            $sql .= " WHERE user_id = :user_id";
+        }
         
         try {
             $db = new Database();
@@ -22,23 +28,24 @@ class Products {
                 description TEXT,
                 price DECIMAL(10, 2) NOT NULL,
                 image_url VARCHAR(255),
-                stock INT DEFAULT 0
+                stock INT DEFAULT 0,
+                user_id INT DEFAULT NULL
             )");
 
-            // Check if table is empty, seed it
-            $check = $conn->query("SELECT COUNT(*) FROM products")->fetchColumn();
-            if ($check == 0) {
-                $conn->exec("INSERT INTO products (name, description, price, image_url, stock) VALUES
-                    ('Tomato Seeds', 'Organic heirloom tomato seeds.', 2.99, 'assets/images/tomato_seeds.png', 100),
-                    ('Basil Seeds', 'Fresh sweet basil seeds.', 1.99, 'assets/images/basil_seeds.png', 150),
-                    ('Lettuce Seeds', 'Crisp romaine lettuce seeds.', 2.49, 'assets/images/lettuce_seeds.png', 120),
-                    ('Pepper Seeds', 'Spicy jalapeño pepper seeds.', 3.49, 'assets/images/pepper_seeds.png', 80),
-                    ('Cucumber Seeds', 'Crunchy garden cucumber seeds.', 2.99, 'assets/images/cucumber_seeds.png', 90),
-                    ('Strawberry Seeds', 'Sweet wild strawberry seeds.', 4.99, 'assets/images/strawberry_seeds.png', 60)
-                ");
+            // Add user_id column if it doesn't exist (for existing tables)
+            try {
+                $conn->exec("ALTER TABLE products ADD COLUMN user_id INT DEFAULT NULL");
+            } catch (\Exception $e) {
+                // Column likely already exists, ignore
             }
 
-            $stmt = $conn->query($sql);
+            if ($userId) {
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([':user_id' => $userId]);
+            } else {
+                $stmt = $conn->query($sql);
+            }
+            
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             // Convert numeric strings to numbers if needed
@@ -68,6 +75,66 @@ class Products {
             return $response
                 ->withHeader('Content-Type', 'application/json')
                 ->withStatus(500);
+        }
+    }
+
+    public function create(Request $request, Response $response) {
+        $data = $request->getParsedBody();
+        
+        $name = $data['name'] ?? null;
+        $description = $data['description'] ?? '';
+        $price = $data['price'] ?? null;
+        $imageUrl = $data['image_url'] ?? '';
+        $stock = $data['stock'] ?? 0;
+        $userId = $data['user_id'] ?? null;
+
+        if (!$name || !$price) {
+            $response->getBody()->write(json_encode(['error' => 'Name and price are required']));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        }
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        try {
+            $stmt = $conn->prepare("INSERT INTO products (name, description, price, image_url, stock, user_id) VALUES (:name, :description, :price, :image_url, :stock, :user_id)");
+            $stmt->execute([
+                ':name' => $name,
+                ':description' => $description,
+                ':price' => $price,
+                ':image_url' => $imageUrl,
+                ':stock' => $stock,
+                ':user_id' => $userId
+            ]);
+
+            $response->getBody()->write(json_encode(['message' => 'Product created successfully']));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
+        } catch (\Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Failed to create product: ' . $e->getMessage()]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
+        }
+    }
+
+    public function delete(Request $request, Response $response, $args) {
+        $id = $args['id'];
+        
+        $db = new Database();
+        $conn = $db->connect();
+
+        try {
+            $stmt = $conn->prepare("DELETE FROM products WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+
+            if ($stmt->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Product deleted successfully']));
+                return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+            } else {
+                $response->getBody()->write(json_encode(['error' => 'Product not found']));
+                return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+            }
+        } catch (\Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Failed to delete product: ' . $e->getMessage()]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
     }
 }

@@ -6,11 +6,13 @@ import '../models/chat_user.dart';
 class FriendProvider with ChangeNotifier {
   List<ChatUser> _friends = [];
   List<dynamic> _pendingRequests = [];
+  List<dynamic> _sentRequests = [];
   bool _isLoading = false;
   String _apiUrl = '';
 
   List<ChatUser> get friends => _friends;
   List<dynamic> get pendingRequests => _pendingRequests;
+  List<dynamic> get sentRequests => _sentRequests;
   bool get isLoading => _isLoading;
 
   void setApiUrl(String url) {
@@ -52,6 +54,22 @@ class FriendProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchSentRequests(int userId) async {
+    if (_apiUrl.isEmpty) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/friends/sent/$userId'),
+      );
+      if (response.statusCode == 200) {
+        _sentRequests = json.decode(response.body);
+        notifyListeners();
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error fetching sent requests: $e');
+    }
+  }
+
   Future<String?> sendFriendRequest(int userId, String friendUsername) async {
     if (_apiUrl.isEmpty) return 'API URL not set';
 
@@ -67,6 +85,7 @@ class FriendProvider with ChangeNotifier {
 
       final data = json.decode(response.body);
       if (response.statusCode == 200) {
+        await fetchSentRequests(userId); // Refresh sent list
         return null; // Success
       } else {
         return data['error'] ?? 'Failed to send request';
@@ -89,6 +108,26 @@ class FriendProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         await fetchFriends(userId);
         await fetchPendingRequests(userId);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteFriend(int userId, int friendId) async {
+    if (_apiUrl.isEmpty) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_apiUrl/v1/friends/delete'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'user_id': userId, 'friend_id': friendId}),
+      );
+
+      if (response.statusCode == 200) {
+        await fetchFriends(userId);
         return true;
       }
       return false;

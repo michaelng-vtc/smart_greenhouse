@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
+import 'dart:math';
 import '../providers/auth_provider.dart';
 import 'verification_screen.dart';
 
@@ -16,19 +18,78 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _captchaController = TextEditingController();
   bool _isLoading = false;
+  bool _isCheckingUsername = false;
+  bool _usernameExists = false;
+  Timer? _debounce;
+
+  int _num1 = 0;
+  int _num2 = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateCaptcha();
+    _usernameController.addListener(_onUsernameChanged);
+  }
+
+  void _onUsernameChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (_usernameController.text.isNotEmpty) {
+        _checkUsername();
+      }
+    });
+  }
+
+  Future<void> _checkUsername() async {
+    setState(() => _isCheckingUsername = true);
+    final exists = await context.read<AuthProvider>().checkUsername(
+      _usernameController.text,
+    );
+    if (mounted) {
+      setState(() {
+        _usernameExists = exists;
+        _isCheckingUsername = false;
+      });
+    }
+  }
+
+  void _generateCaptcha() {
+    final random = Random();
+    setState(() {
+      _num1 = random.nextInt(10);
+      _num2 = random.nextInt(10);
+      _captchaController.clear();
+    });
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _usernameController.removeListener(_onUsernameChanged);
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _captchaController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_captchaController.text != (_num1 + _num2).toString()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Incorrect CAPTCHA answer'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      _generateCaptcha();
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -74,10 +135,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _usernameController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Username',
-                    prefixIcon: Icon(Icons.person),
-                    border: OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.person),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: _isCheckingUsername
+                        ? const Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : _usernameController.text.isNotEmpty
+                        ? Icon(
+                            _usernameExists ? Icons.error : Icons.check,
+                            color: _usernameExists ? Colors.red : Colors.green,
+                          )
+                        : null,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -85,6 +161,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     }
                     if (value.length < 3) {
                       return 'Username must be at least 3 characters';
+                    }
+                    if (_usernameExists) {
+                      return 'Username is already taken';
                     }
                     return null;
                   },
@@ -146,6 +225,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                // CAPTCHA
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey),
+                      ),
+                      child: Text(
+                        '$_num1 + $_num2 = ?',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _captchaController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Answer',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Required';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _generateCaptcha,
+                      tooltip: 'Refresh CAPTCHA',
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(

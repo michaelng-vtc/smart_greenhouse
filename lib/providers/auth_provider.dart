@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class AuthProvider with ChangeNotifier {
@@ -15,6 +15,25 @@ class AuthProvider with ChangeNotifier {
   String? get username => _username;
   int? get userId => _userId;
   String? get errorMessage => _errorMessage;
+
+  Future<bool> checkUsername(String username) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/v1/auth/check-username?username=$username'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['exists'] == true;
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error checking username: $e');
+      }
+      return false;
+    }
+  }
 
   Future<bool> login(String username, String password) async {
     _errorMessage = null;

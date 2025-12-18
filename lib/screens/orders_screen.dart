@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:excel/excel.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
+import '../models/order.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -23,6 +28,53 @@ class _OrdersScreenState extends State<OrdersScreen> {
     });
   }
 
+  Future<void> _exportToExcel(List<Order> orders) async {
+    var excel = Excel.createExcel();
+    // Rename default sheet
+    String defaultSheet = excel.getDefaultSheet()!;
+    excel.rename(defaultSheet, 'Orders');
+
+    Sheet sheet = excel['Orders'];
+
+    // Add headers
+    List<CellValue> headers = [
+      TextCellValue('Order ID'),
+      TextCellValue('Date'),
+      TextCellValue('Status'),
+      TextCellValue('Total Amount'),
+      TextCellValue('Items'),
+    ];
+    sheet.appendRow(headers);
+
+    for (var order in orders) {
+      String itemsStr = order.items
+          .map((item) => '${item.productName} (${item.quantity})')
+          .join(', ');
+
+      List<CellValue> row = [
+        IntCellValue(order.id),
+        TextCellValue(DateFormat('yyyy-MM-dd HH:mm').format(order.createdAt)),
+        TextCellValue(order.status),
+        DoubleCellValue(order.totalAmount),
+        TextCellValue(itemsStr),
+      ];
+      sheet.appendRow(row);
+    }
+
+    // Save
+    var fileBytes = excel.save();
+    if (fileBytes != null) {
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/orders_report.xlsx');
+      await file.writeAsBytes(fileBytes);
+
+      // Share
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Here is your orders report.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,6 +82,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
         title: const Text('My Orders'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        actions: [
+          Consumer<CartProvider>(
+            builder: (context, cart, child) {
+              return IconButton(
+                icon: const Icon(Icons.download),
+                onPressed: cart.orders.isEmpty
+                    ? null
+                    : () => _exportToExcel(cart.orders),
+                tooltip: 'Export Report',
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {

@@ -259,7 +259,8 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     image_url VARCHAR(255),
-    stock INT DEFAULT 0
+    stock INT DEFAULT 0,
+    user_id INT DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -304,10 +305,23 @@ CREATE TABLE IF NOT EXISTS friends (
 );
 
 -- Insert sample products
-INSERT INTO products (name, description, price, image_url, stock) VALUES
-('Tomato Seeds', 'Organic heirloom tomato seeds.', 2.99, 'assets/images/tomato_seeds.png', 100),
-('Basil Seeds', 'Fresh sweet basil seeds.', 1.99, 'assets/images/basil_seeds.png', 150),
-('Lettuce Seeds', 'Crisp romaine lettuce seeds.', 2.49, 'assets/images/lettuce_seeds.png', 120),
-('Pepper Seeds', 'Spicy jalapeño pepper seeds.', 3.49, 'assets/images/pepper_seeds.png', 80),
-('Cucumber Seeds', 'Crunchy garden cucumber seeds.', 2.99, 'assets/images/cucumber_seeds.png', 90),
-('Strawberry Seeds', 'Sweet wild strawberry seeds.', 4.99, 'assets/images/strawberry_seeds.png', 60);
+INSERT INTO products (name, description, price, image_url, stock, user_id) VALUES
+('Tomato Seeds', 'Organic heirloom tomato seeds.', 2.99, 'assets/images/tomato_seeds.png', 100, NULL),
+('Basil Seeds', 'Fresh sweet basil seeds.', 1.99, 'assets/images/basil_seeds.png', 150, NULL),
+('Lettuce Seeds', 'Crisp romaine lettuce seeds.', 2.49, 'assets/images/lettuce_seeds.png', 120, NULL),
+('Pepper Seeds', 'Spicy jalapeño pepper seeds.', 3.49, 'assets/images/pepper_seeds.png', 80, NULL),
+('Cucumber Seeds', 'Crunchy garden cucumber seeds.', 2.99, 'assets/images/cucumber_seeds.png', 90, NULL),
+('Strawberry Seeds', 'Sweet wild strawberry seeds.', 4.99, 'assets/images/strawberry_seeds.png', 60, NULL);
+
+-- Insert dummy user
+INSERT INTO users (username, email, password, is_verified) VALUES
+('farmer_john', 'john@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1); -- password: password
+
+-- Insert dummy products for farmer_john
+INSERT INTO products (name, description, price, image_url, stock, user_id) 
+SELECT 'Rare Orchid Seeds', 'Exotic orchid seeds from the rainforest.', 12.99, 'assets/images/default_seed.png', 10, id 
+FROM users WHERE username = 'farmer_john';
+
+INSERT INTO products (name, description, price, image_url, stock, user_id) 
+SELECT 'Giant Pumpkin Seeds', 'Seeds for growing prize-winning pumpkins.', 5.99, 'assets/images/default_seed.png', 50, id 
+FROM users WHERE username = 'farmer_john';

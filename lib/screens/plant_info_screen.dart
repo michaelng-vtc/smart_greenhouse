@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/plant_info_provider.dart';
 
+import 'package:smart_greenhouse/l10n/app_localizations.dart';
 import 'plant_info_detail_screen.dart';
 import 'user_list_screen.dart';
 
@@ -26,7 +27,7 @@ class _PlantInfoScreenState extends State<PlantInfoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Plant News & Info'),
+        title: Text(AppLocalizations.of(context).plantNewsInfo),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
@@ -48,7 +49,9 @@ class _PlantInfoScreenState extends State<PlantInfoScreen> {
           }
 
           if (provider.items.isEmpty) {
-            return const Center(child: Text('No plant information available.'));
+            return Center(
+              child: Text(AppLocalizations.of(context).noPlantInfo),
+            );
           }
 
           return ListView.builder(
