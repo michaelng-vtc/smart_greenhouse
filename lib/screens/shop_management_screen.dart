@@ -300,10 +300,14 @@ class _ShopManagementScreenState extends State<ShopManagementScreen> {
                                               : '${cart.apiUrl}/${product.imageUrl}',
                                           fit: BoxFit.cover,
                                           errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  const Icon(
-                                                    Icons.broken_image,
-                                                  ),
+                                              (context, error, stackTrace) {
+                                                debugPrint(
+                                                  'MANAGEMENT IMAGE LOAD ERROR: $error',
+                                                );
+                                                return const Icon(
+                                                  Icons.broken_image,
+                                                );
+                                              },
                                         ),
                                 ),
                               ),

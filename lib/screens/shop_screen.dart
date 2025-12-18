@@ -163,6 +163,7 @@ class ShopScreen extends StatelessWidget {
                                         );
                                       },
                                   errorBuilder: (ctx, error, stackTrace) {
+                                    debugPrint('IMAGE LOAD ERROR: $error');
                                     return Center(
                                       child: Column(
                                         mainAxisAlignment:
